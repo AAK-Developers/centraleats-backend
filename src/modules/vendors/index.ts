@@ -1,0 +1,2 @@
+// Vendors Module — CentralEats
+export {};

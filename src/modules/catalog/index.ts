@@ -1,0 +1,2 @@
+// Catalog Module — CentralEats
+export {};
