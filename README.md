@@ -97,3 +97,22 @@ npx prisma db seed
 | **GET** | `/api/categories` | Obtiene el listado de categorías activas | ❌ No |
 | **GET** | `/api/vendors` | Obtiene el listado de vendedores/puestos de comida activos | ❌ No |
 | **GET** | `/api/products` | Obtiene el catálogo de productos (admite filtro opcional `?vendorId=`) | ❌ No |
+
+## Estado Actual del Proyecto
+
+### Infraestructura completada
+
+- Configuración de Supabase PostgreSQL
+- Configuración Prisma ORM
+- Migraciones versionadas
+- Seed de datos iniciales
+- Prisma Client generado
+- Arquitectura Modular Monolith
+- Clean Architecture
+
+### Próxima fase
+
+- Integración Clerk Authentication
+- Middleware JWT
+- Sincronización Usuario Clerk ↔ Base de Datos
+- Protección de endpoints privados
