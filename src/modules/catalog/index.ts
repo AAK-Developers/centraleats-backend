@@ -1,2 +1,1 @@
-// Catalog Module — CentralEats
-export {};
+export * from "./presentation/http/routes/catalogRoutes";

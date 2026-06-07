@@ -1,2 +1,1 @@
-// Vendors Module — CentralEats
-export {};
+export * from "./presentation/http/routes/vendorRoutes";
