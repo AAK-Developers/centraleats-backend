@@ -1,7 +1,11 @@
 import { PrismaClient, UserRole } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
+import "dotenv/config";
 
-const prisma = new PrismaClient();
-
+const pool = new Pool({ connectionString: process.env.DIRECT_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 async function main() {
   // Clean existing tables in reverse order of dependencies
   await prisma.notification.deleteMany();
@@ -94,7 +98,7 @@ async function main() {
     data: {
       name: "Almuerzo Ejecutivo Completo",
       description: "Entrada de sopa del día, plato fuerte (carne/pollo/pescado con arroz y ensalada) y jugo natural.",
-      price: 3.50,
+      price: "3.50",
       stock: 45,
       imageUrl: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=300&q=80",
       isActive: true,
@@ -107,7 +111,7 @@ async function main() {
     data: {
       name: "Jugo de Naranja Grande",
       description: "Exprimido al instante y 100% natural.",
-      price: 1.50,
+      price: "1.50",
       stock: 60,
       imageUrl: "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?auto=format&fit=crop&w=300&q=80",
       isActive: true,
@@ -121,7 +125,7 @@ async function main() {
     data: {
       name: "Empanada de Viento con Azúcar",
       description: "Empanada gigante frita rellena de queso, espolvoreada con azúcar blanca.",
-      price: 0.80,
+      price: "0.80",
       stock: 35,
       imageUrl: "https://images.unsplash.com/photo-1601050690597-df056fb4ce78?auto=format&fit=crop&w=300&q=80",
       isActive: true,
@@ -134,7 +138,7 @@ async function main() {
     data: {
       name: "Café Americano Caliente",
       description: "Café negro filtrado de especialidad lojano.",
-      price: 1.20,
+      price: "1.20",
       stock: 100,
       imageUrl: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=300&q=80",
       isActive: true,
@@ -143,8 +147,8 @@ async function main() {
     },
   });
 
-  console.log("🥞 Products seeded successfully.");
-  console.log("🚀 Seed completed!");
+  console.log("Products seeded successfully.");
+  console.log("Seed completed!");
 }
 
 main()
