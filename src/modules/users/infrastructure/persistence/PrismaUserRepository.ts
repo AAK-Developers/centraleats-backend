@@ -1,0 +1,62 @@
+import { prismaClient } from "../../../../infrastructure/database/prismaClient";
+import { User } from "../../domain/entities/User";
+import { IUserRepository } from "../../domain/repositories/IUserRepository";
+import { UserRole } from "@prisma/client";
+
+export class PrismaUserRepository implements IUserRepository {
+  private toDomain(prismaUser: any): User {
+    return new User(
+      prismaUser.id,
+      prismaUser.clerkId,
+      prismaUser.email,
+      prismaUser.fullName,
+      prismaUser.avatarUrl,
+      prismaUser.role as "STUDENT" | "VENDOR" | "ADMIN",
+      prismaUser.isActive,
+      prismaUser.createdAt,
+      prismaUser.updatedAt
+    );
+  }
+
+  async findById(id: string): Promise<User | null> {
+    const prismaUser = await prismaClient.user.findUnique({
+      where: { id },
+    });
+    return prismaUser ? this.toDomain(prismaUser) : null;
+  }
+
+  async findByClerkId(clerkId: string): Promise<User | null> {
+    const prismaUser = await prismaClient.user.findUnique({
+      where: { clerkId },
+    });
+    return prismaUser ? this.toDomain(prismaUser) : null;
+  }
+
+  async create(user: Omit<User, "id" | "createdAt" | "updatedAt">): Promise<User> {
+    const prismaUser = await prismaClient.user.create({
+      data: {
+        clerkId: user.clerkId,
+        email: user.email,
+        fullName: user.fullName,
+        avatarUrl: user.avatarUrl,
+        role: user.role as UserRole,
+        isActive: user.isActive,
+      },
+    });
+    return this.toDomain(prismaUser);
+  }
+
+  async update(id: string, data: Partial<Omit<User, "id" | "createdAt" | "updatedAt">>): Promise<User> {
+    const prismaUser = await prismaClient.user.update({
+      where: { id },
+      data: {
+        email: data.email,
+        fullName: data.fullName,
+        avatarUrl: data.avatarUrl,
+        role: data.role as UserRole,
+        isActive: data.isActive,
+      },
+    });
+    return this.toDomain(prismaUser);
+  }
+}
