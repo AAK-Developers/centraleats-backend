@@ -1,67 +1,66 @@
 # CentralEats Backend — UCE
 
-Backend transaccional para la plataforma de pedidos de comida en el campus universitario de la UCE. Desarrollado bajo un enfoque de **Modular Monolith** y **Clean Architecture** para garantizar desacoplamiento, pruebas robustas y escalabilidad futura.
-
+Transactional backend for the food ordering platform on the UCE university campus. Developed under a **Modular Monolith** and **Clean Architecture** approach to ensure decoupling, robust testing, and future scalability.
 ---
 
-## 🏛️ Diseño Arquitectónico
+## 🏛️ Architectural Design
 
-El sistema está estructurado como un **Monolito Modular**. Cada dominio o contexto de negocio se encuentra aislado dentro de su propia carpeta en `src/modules/`, compartiendo únicamente tipos utilitarios o middlewares de infraestructura en la carpeta `src/shared/`.
+The system is structured as a **Modular Monolith**. Each business domain or context is isolated within its own folder in `src/modules/`, sharing only utility types or infrastructure middlewares in the `src/shared/` folder.
 
-### 📂 Estructura de Capas (Clean Architecture)
-Cada módulo sigue un flujo de dependencias estrictamente unidireccional (de afuera hacia adentro):
+### 📂 Layer Structure (Clean Architecture)
+Each module follows a strictly unidirectional dependency flow (from outside in):
 
 ```
 src/modules/<module-name>/
-├── application/use-cases/         # Casos de uso de negocio (Orquestación)
+├── application/use-cases/         # Business use cases (Orchestration)
 ├── domain/
-│   ├── entities/                  # Entidades puras del dominio
-│   ├── repositories/              # Contratos/interfaces de persistencia
-│   └── rules/                     # Reglas y validaciones de negocio
-├── infrastructure/persistence/    # Implementación de repositorios (Prisma / In-Memory)
+│   ├── entities/                  # Pure domain entities
+│   ├── repositories/              # Persistence contracts/interfaces
+│   └── rules/                     # Business rules and validations
+├── infrastructure/persistence/    # Repository implementation (Prisma / In-Memory)
 └── presentation/http/
-    ├── controllers/               # Controladores Express delgados (Thin Controllers)
-    └── routes/                    # Definición de rutas HTTP Express
+    ├── controllers/               # Thin Express controllers
+    └── routes/                    # Express HTTP route definitions
 ```
 
 ---
 
-## 🛠️ Tecnologías Utilizadas
+## 🛠️ Technologies Used
 
 * **Runtime:** Node.js (v18+)
-* **Lenguaje:** TypeScript
-* **Framework Web:** Express (v5.x)
-* **Validación de Datos:** Zod (v4.x)
+* **Language:** TypeScript
+* **Web Framework:** Express (v5.x)
+* **Data Validation:** Zod (v4.x)
 * **ORM:** Prisma Client (v7.8.0)
-* **Base de Datos:** Supabase (PostgreSQL)
+* **Database:** Supabase (PostgreSQL)
 
 ---
 
-## ⚙️ Requisitos y Configuración Inicial
+## ⚙️ Requirements and Initial Configuration
 
-### 1. Variables de Entorno
-Crea un archivo `.env` en la raíz del proyecto basándote en el archivo `.env.example`:
+### 1. Environment Variables
+Create a `.env` file in the root of the project based on the `.env.example` file:
 
 ```bash
 cp .env.example .env
 ```
 
-Configura tus credenciales de base de datos de Supabase en el archivo `.env`:
-* `DATABASE_URL`: URL del pooler transaccional de Supabase (puerto 6543 con `pgbouncer=true`).
-* `DIRECT_URL`: URL de conexión directa para ejecutar las migraciones (puerto 5432).
+Configure your Supabase database credentials in the `.env` file:
+* `DATABASE_URL`: URL of the Supabase transactional pooler (port 6543 with `pgbouncer=true`).
+* `DIRECT_URL`: Direct connection URL to execute migrations (port 5432).
 
 ---
 
-## 🗄️ Inicialización de Base de Datos y Migraciones
+## 🗄️ Database Initialization and Migrations
 
-### 1. Ejecutar la Primera Migración
-Una vez configuradas las variables de entorno con la contraseña real de tu proyecto Supabase, ejecuta:
+### 1. Execute the First Migration
+Once the environment variables are configured with your real Supabase project password, execute:
 ```bash
 npx prisma migrate dev --name init
 ```
 
-### 2. Restricciones de Integridad (CHECK Constraints)
-Prisma no soporta la creación de restricciones `CHECK` nativas de SQL. Para asegurar la integridad financiera y de stock en tu base de datos Supabase, ejecuta el siguiente script SQL en el editor de SQL (SQL Editor) de la consola web de Supabase tras migrar:
+### 2. Integrity Constraints (CHECK Constraints)
+Prisma does not support the creation of native SQL `CHECK` constraints. To ensure financial and stock integrity in your Supabase database, execute the following SQL script in the SQL Editor of the Supabase web console after migrating:
 
 ```sql
 ALTER TABLE "Product" ADD CONSTRAINT "product_stock_non_negative" CHECK (stock >= 0);
@@ -71,48 +70,48 @@ ALTER TABLE "OrderItem" ADD CONSTRAINT "order_item_unit_price_positive" CHECK ("
 ALTER TABLE "Payment" ADD CONSTRAINT "payment_amount_positive" CHECK (amount > 0);
 ```
 
-### 3. Cargar Datos Iniciales (Seed)
-Para poblar la base de datos con mockups de prueba (Administradores, Vendedores, Categorías y Productos), ejecuta:
+### 3. Load Initial Data (Seed)
+To populate the database with test mockups (Administrators, Vendors, Categories, and Products), execute:
 ```bash
 npx prisma db seed
 ```
 
 ---
 
-## 🚀 Comandos de Ejecución
+## 🚀 Running Commands
 
-* **Instalar dependencias:** `npm install`
-* **Modo Desarrollo:** `npm run dev` (utiliza `ts-node-dev` para recarga en caliente)
-* **Verificar Compilación TypeScript:** `npx tsc --noEmit`
-* **Compilar para Producción:** `npm run build`
-* **Iniciar en Producción:** `npm run start`
+* **Install dependencies:** `npm install`
+* **Development Mode:** `npm run dev` (uses `ts-node-dev` for hot reload)
+* **Verify TypeScript Compilation:** `npx tsc --noEmit`
+* **Compile for Production:** `npm run build`
+* **Run in Production:** `npm run start`
 
 ---
 
-## 📡 Endpoints Públicos Disponibles (Fase 8)
+## 📡 Available Public Endpoints (Phase 8)
 
-| Método | Endpoint | Descripción | Requiere Autenticación |
+| Method | Endpoint | Description | Requires Authentication |
 |---|---|---|---|
-| **GET** | `/health` | Estado de salud general del API backend | ❌ No |
-| **GET** | `/api/categories` | Obtiene el listado de categorías activas | ❌ No |
-| **GET** | `/api/vendors` | Obtiene el listado de vendedores/puestos de comida activos | ❌ No |
-| **GET** | `/api/products` | Obtiene el catálogo de productos (admite filtro opcional `?vendorId=`) | ❌ No |
+| **GET** | `/health` | General health status of the backend API | ❌ No |
+| **GET** | `/api/categories` | Get the list of active categories | ❌ No |
+| **GET** | `/api/vendors` | Get the list of active vendors/food stalls | ❌ No |
+| **GET** | `/api/products` | Get the product catalog (supports optional filter `?vendorId=`) | ❌ No |
 
-## Estado Actual del Proyecto
+## Current Project Status
 
-### Infraestructura completada
+### Infrastructure completed
 
-- Configuración de Supabase PostgreSQL
-- Configuración Prisma ORM
-- Migraciones versionadas
-- Seed de datos iniciales
-- Prisma Client generado
-- Arquitectura Modular Monolith
+- Supabase PostgreSQL configuration
+- Prisma ORM configuration
+- Versioned migrations
+- Initial data seed
+- Prisma Client generated
+- Modular Monolith architecture
 - Clean Architecture
 
-### Próxima fase
+### Next phase
 
-- Integración Clerk Authentication
-- Middleware JWT
-- Sincronización Usuario Clerk ↔ Base de Datos
-- Protección de endpoints privados
+- Clerk Authentication integration
+- JWT Middleware
+- Clerk User ↔ Database Synchronization
+- Private endpoint protection
