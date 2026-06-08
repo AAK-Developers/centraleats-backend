@@ -1,4 +1,4 @@
-import { prismaClient } from "../../../../infrastructure/database/prismaClient";
+import { prisma } from "../../../../infrastructure/database/prismaClient";
 import { User } from "../../domain/entities/User";
 import { IUserRepository } from "../../domain/repositories/IUserRepository";
 import { UserRole } from "@prisma/client";
@@ -19,21 +19,21 @@ export class PrismaUserRepository implements IUserRepository {
   }
 
   async findById(id: string): Promise<User | null> {
-    const prismaUser = await prismaClient.user.findUnique({
+    const prismaUser = await prisma.user.findUnique({
       where: { id },
     });
     return prismaUser ? this.toDomain(prismaUser) : null;
   }
 
   async findByClerkId(clerkId: string): Promise<User | null> {
-    const prismaUser = await prismaClient.user.findUnique({
+    const prismaUser = await prisma.user.findUnique({
       where: { clerkId },
     });
     return prismaUser ? this.toDomain(prismaUser) : null;
   }
 
   async create(user: Omit<User, "id" | "createdAt" | "updatedAt">): Promise<User> {
-    const prismaUser = await prismaClient.user.create({
+    const prismaUser = await prisma.user.create({
       data: {
         clerkId: user.clerkId,
         email: user.email,
@@ -47,7 +47,7 @@ export class PrismaUserRepository implements IUserRepository {
   }
 
   async update(id: string, data: Partial<Omit<User, "id" | "createdAt" | "updatedAt">>): Promise<User> {
-    const prismaUser = await prismaClient.user.update({
+    const prismaUser = await prisma.user.update({
       where: { id },
       data: {
         email: data.email,

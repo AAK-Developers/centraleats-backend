@@ -1,4 +1,4 @@
-import { prismaClient } from "../../../../infrastructure/database/prismaClient";
+import { prisma } from "../../../../infrastructure/database/prismaClient";
 import { Product } from "../../domain/entities/Product";
 import { IProductRepository } from "../../domain/repositories/IProductRepository";
 
@@ -20,28 +20,28 @@ export class PrismaProductRepository implements IProductRepository {
   }
 
   async findById(id: string): Promise<Product | null> {
-    const prismaProduct = await prismaClient.product.findUnique({
+    const prismaProduct = await prisma.product.findUnique({
       where: { id },
     });
     return prismaProduct ? this.toDomain(prismaProduct) : null;
   }
 
   async listActive(): Promise<Product[]> {
-    const prismaProducts = await prismaClient.product.findMany({
+    const prismaProducts = await prisma.product.findMany({
       where: { isActive: true },
     });
-    return prismaProducts.map(p => this.toDomain(p));
+    return prismaProducts.map((p: any) => this.toDomain(p));
   }
 
   async listByVendorId(vendorId: string): Promise<Product[]> {
-    const prismaProducts = await prismaClient.product.findMany({
+    const prismaProducts = await prisma.product.findMany({
       where: { vendorId },
     });
-    return prismaProducts.map(p => this.toDomain(p));
+    return prismaProducts.map((p: any) => this.toDomain(p));
   }
 
   async create(product: Omit<Product, "id" | "createdAt" | "updatedAt">): Promise<Product> {
-    const prismaProduct = await prismaClient.product.create({
+    const prismaProduct = await prisma.product.create({
       data: {
         name: product.name,
         description: product.description,
@@ -57,7 +57,7 @@ export class PrismaProductRepository implements IProductRepository {
   }
 
   async update(id: string, data: Partial<Omit<Product, "id" | "createdAt" | "updatedAt">>): Promise<Product> {
-    const prismaProduct = await prismaClient.product.update({
+    const prismaProduct = await prisma.product.update({
       where: { id },
       data: {
         name: data.name,
