@@ -33,6 +33,7 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 COPY prisma ./prisma/
+COPY prisma.config.ts ./
 
 # Install production dependencies ONLY
 RUN npm ci --omit=dev && npm cache clean --force
