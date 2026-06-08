@@ -9,6 +9,7 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().url().default("http://localhost:5173"),
   DATABASE_URL: z.string().url(),
   DIRECT_URL: z.string().url().optional(),
+  CLERK_WEBHOOK_SECRET: z.string().min(1, "CLERK_WEBHOOK_SECRET is required"),
 });
 
 export const env = envSchema.parse(process.env);

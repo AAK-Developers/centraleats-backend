@@ -1,4 +1,4 @@
-import { prismaClient } from "../../../../infrastructure/database/prismaClient";
+import { prisma } from "../../../../infrastructure/database/prismaClient";
 import { Order } from "../../domain/entities/Order";
 import { CreateOrderInput, IOrderRepository } from "../../domain/repositories/IOrderRepository";
 import { OrderStatus } from "../../domain/rules/OrderStatus";
@@ -41,7 +41,7 @@ export class PrismaOrderRepository implements IOrderRepository {
   }
 
   async create(input: CreateOrderInput): Promise<Order> {
-    const prismaOrder = await prismaClient.order.create({
+    const prismaOrder = await prisma.order.create({
       data: {
         userId: input.userId,
         vendorId: input.vendorId,

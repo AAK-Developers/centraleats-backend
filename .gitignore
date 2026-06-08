@@ -144,3 +144,6 @@ vite.config.ts.timestamp-*
 .vite/
 
 /generated/prisma
+# Local tools
+*.exe
+ngrok.exe
