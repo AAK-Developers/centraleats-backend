@@ -9,6 +9,7 @@ RUN apk add --no-cache python3 make g++
 # Copy package files (including package-lock.json)
 COPY package*.json ./
 COPY prisma ./prisma/
+COPY prisma.config.ts ./
 
 # Install ALL dependencies
 RUN npm ci
@@ -16,10 +17,15 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Generate Prisma Client (with dummy envs to avoid build errors)
-ENV DATABASE_URL="postgresql://user:pass@localhost:5432/db"
-ENV DIRECT_URL="postgresql://user:pass@localhost:5432/db"
-ENV CLERK_WEBHOOK_SECRET="dummy"
+# Generate Prisma Client (using ARGs to avoid security warnings, only for build time)
+ARG DATABASE_URL="postgresql://user:pass@localhost:5432/db"
+ARG DIRECT_URL="postgresql://user:pass@localhost:5432/db"
+ARG CLERK_WEBHOOK_SECRET="dummy"
+
+ENV DATABASE_URL=$DATABASE_URL
+ENV DIRECT_URL=$DIRECT_URL
+ENV CLERK_WEBHOOK_SECRET=$CLERK_WEBHOOK_SECRET
+
 RUN npm run prisma:generate
 
 # Build the application
@@ -30,13 +36,14 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Copy package files
+# Copy essential files for production install
 COPY package*.json ./
 COPY prisma ./prisma/
 COPY prisma.config.ts ./
 
 # Install production dependencies ONLY
-RUN npm ci --omit=dev && npm cache clean --force
+# We use --ignore-scripts here because prisma client is copied from builder
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 # Copy build artifacts and prisma client from builder
 COPY --from=builder /app/dist ./dist
