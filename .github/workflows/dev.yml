@@ -20,10 +20,14 @@ jobs:
         cache: 'npm'
 
     - name: Install Dependencies
-      run: npm ci
+      run: npm ci --ignore-scripts
 
     - name: Generate Prisma Client
       run: npm run prisma:generate
+      env:
+        DATABASE_URL: "postgresql://user:pass@localhost:5432/db"
+        DIRECT_URL: "postgresql://user:pass@localhost:5432/db"
+        CLERK_WEBHOOK_SECRET: "dummy_secret"
 
     - name: Run Build
       run: npm run build
