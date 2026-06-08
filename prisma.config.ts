@@ -10,6 +10,7 @@ export default defineConfig({
     seed: "npx ts-node prisma/seed.ts",
   },
   datasource: {
-    url: env("DIRECT_URL"),
+    // We use DIRECT_URL for migrations if available, otherwise DATABASE_URL
+    url: env("DIRECT_URL") || env("DATABASE_URL") || "postgresql://user:pass@localhost:5432/db",
   },
 });
