@@ -11,13 +11,13 @@ COPY package*.json ./
 COPY prisma ./prisma/
 COPY prisma.config.ts ./
 
-# Install ALL dependencies
-RUN npm ci
+# Install ALL dependencies (ignoring scripts to avoid prisma error)
+RUN npm ci --ignore-scripts
 
 # Copy source code
 COPY . .
 
-# Generate Prisma Client (using ARGs to avoid security warnings, only for build time)
+# Set dummy envs for prisma generate (Prisma 7 requirement)
 ARG DATABASE_URL="postgresql://user:pass@localhost:5432/db"
 ARG DIRECT_URL="postgresql://user:pass@localhost:5432/db"
 ARG CLERK_WEBHOOK_SECRET="dummy"
@@ -26,6 +26,7 @@ ENV DATABASE_URL=$DATABASE_URL
 ENV DIRECT_URL=$DIRECT_URL
 ENV CLERK_WEBHOOK_SECRET=$CLERK_WEBHOOK_SECRET
 
+# Generate Prisma Client manually
 RUN npm run prisma:generate
 
 # Build the application
@@ -42,7 +43,6 @@ COPY prisma ./prisma/
 COPY prisma.config.ts ./
 
 # Install production dependencies ONLY
-# We use --ignore-scripts here because prisma client is copied from builder
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 # Copy build artifacts and prisma client from builder
