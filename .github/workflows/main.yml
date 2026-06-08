@@ -44,4 +44,4 @@ jobs:
             -e CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }} \
             -e CLERK_WEBHOOK_SECRET=${{ secrets.CLERK_WEBHOOK_SECRET }} \
             ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:latest
-          docker exec centraleats-prod npx prisma migrate deploy
+          docker exec -e DIRECT_URL="${{ secrets.PROD_DIRECT_URL }}" centraleats-prod npx prisma migrate deploy
