@@ -9,6 +9,8 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().url().default("http://localhost:5173"),
   DATABASE_URL: z.string().url(),
   DIRECT_URL: z.string().url().optional(),
+  CLERK_SECRET_KEY: z.string().startsWith("sk_", "CLERK_SECRET_KEY must start with sk_"),
+  CLERK_PUBLISHABLE_KEY: z.string().startsWith("pk_", "CLERK_PUBLISHABLE_KEY must start with pk_").optional(),
 });
 
 export const env = envSchema.parse(process.env);
