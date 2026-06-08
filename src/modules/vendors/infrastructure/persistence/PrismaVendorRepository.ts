@@ -1,4 +1,4 @@
-import { prismaClient } from "../../../../infrastructure/database/prismaClient";
+import { prisma } from "../../../../infrastructure/database/prismaClient";
 import { Vendor } from "../../domain/entities/Vendor";
 import { IVendorRepository } from "../../domain/repositories/IVendorRepository";
 
@@ -18,21 +18,21 @@ export class PrismaVendorRepository implements IVendorRepository {
   }
 
   async findById(id: string): Promise<Vendor | null> {
-    const prismaVendor = await prismaClient.vendor.findUnique({
+    const prismaVendor = await prisma.vendor.findUnique({
       where: { id },
     });
     return prismaVendor ? this.toDomain(prismaVendor) : null;
   }
 
   async listActive(): Promise<Vendor[]> {
-    const prismaVendors = await prismaClient.vendor.findMany({
+    const prismaVendors = await prisma.vendor.findMany({
       where: { isActive: true },
     });
     return prismaVendors.map(v => this.toDomain(v));
   }
 
   async create(vendor: Omit<Vendor, "id" | "createdAt" | "updatedAt">): Promise<Vendor> {
-    const prismaVendor = await prismaClient.vendor.create({
+    const prismaVendor = await prisma.vendor.create({
       data: {
         name: vendor.name,
         description: vendor.description,
@@ -46,7 +46,7 @@ export class PrismaVendorRepository implements IVendorRepository {
   }
 
   async update(id: string, data: Partial<Omit<Vendor, "id" | "createdAt" | "updatedAt">>): Promise<Vendor> {
-    const prismaVendor = await prismaClient.vendor.update({
+    const prismaVendor = await prisma.vendor.update({
       where: { id },
       data: {
         name: data.name,
