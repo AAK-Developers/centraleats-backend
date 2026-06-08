@@ -1,0 +1,231 @@
+// ─────────────────────────────────────────────
+// CentralEats — Schema Prisma v1.0
+// Fuente de verdad del modelo relacional.
+// Fecha: 2026-06-02
+// ─────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+// ═══════════════════════════════════════════════
+// ENUMS
+// ═══════════════════════════════════════════════
+
+enum UserRole {
+  STUDENT
+  VENDOR
+  ADMIN
+}
+
+/// Ciclo de vida de una orden (7 fases + 1 excepción).
+/// Ver: Order Lifecycle Flow Diagram
+enum OrderStatus {
+  PENDING_PAYMENT // 1. Orden creada, esperando pago
+  PAID // 2. Pago confirmado
+  RECEIVED // 3. Vendor recibió la orden
+  PREPARING // 4. Vendor está preparando
+  READY // 5. Lista para recoger
+  PICKED_UP // 6. Cliente la recogió
+  COMPLETED // 7. Orden completada
+  CANCELLED // Excepción: orden cancelada
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+}
+
+enum NotificationType {
+  ORDER_CREATED
+  ORDER_PAID
+  ORDER_RECEIVED
+  ORDER_PREPARING
+  ORDER_READY
+  ORDER_PICKED_UP
+  ORDER_COMPLETED
+  ORDER_CANCELLED
+  PAYMENT_RECEIVED
+  PAYMENT_FAILED
+  PAYMENT_REFUNDED
+  SYSTEM
+}
+
+// ═══════════════════════════════════════════════
+// MODELS
+// ═══════════════════════════════════════════════
+
+/// Usuario del sistema. Identidad manejada por Clerk.
+/// El backend SOLO almacena datos de negocio, NO contraseñas.
+model User {
+  id        String   @id @default(uuid())
+  clerkId   String   @unique
+  email     String   @unique
+  fullName  String?
+  avatarUrl String?
+  role      UserRole @default(STUDENT)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  orders        Order[]
+  notifications Notification[]
+  vendors       Vendor[] // 1:N — un usuario VENDOR puede tener varios locales
+
+  @@index([clerkId])
+  @@index([role])
+}
+
+/// Establecimiento/puesto de comida dentro del campus.
+/// Relación 1:N con User (un VENDOR puede administrar varios locales).
+model Vendor {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  location    String? // String libre para MVP. Coordenadas post-MVP.
+  phone       String?
+  isActive    Boolean  @default(true)
+  ownerId     String // SIN @unique → permite 1:N (User puede tener N vendors)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  owner    User      @relation(fields: [ownerId], references: [id])
+  products Product[]
+  orders   Order[]
+
+  @@index([ownerId])
+  @@index([isActive])
+}
+
+/// Categoría de productos (ej: Bebidas, Almuerzos, Snacks).
+/// Gestionada exclusivamente por ADMIN.
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  products Product[]
+}
+
+/// Producto del catálogo de un Vendor.
+/// CHECK constraints (stock >= 0, price > 0) se aplican via migration SQL.
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  stock       Int      @default(0)
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  vendorId    String
+  categoryId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  vendor     Vendor      @relation(fields: [vendorId], references: [id])
+  category   Category    @relation(fields: [categoryId], references: [id])
+  orderItems OrderItem[]
+
+  @@index([vendorId])
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+/// Pedido realizado por un estudiante a un vendor.
+/// Estado sigue el Order Lifecycle Flow Diagram (7 fases).
+model Order {
+  id          String      @id @default(uuid())
+  userId      String
+  vendorId    String
+  status      OrderStatus @default(PENDING_PAYMENT)
+  totalAmount Decimal     @db.Decimal(10, 2)
+  pickupCode  String?     @unique
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  user          User           @relation(fields: [userId], references: [id])
+  vendor        Vendor         @relation(fields: [vendorId], references: [id])
+  items         OrderItem[]
+  payment       Payment?
+  notifications Notification[]
+
+  @@index([userId])
+  @@index([vendorId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// Línea de detalle de un pedido.
+/// Inmutable después de creación, pero updatedAt incluido por consistencia.
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int
+  unitPrice Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+}
+
+/// Registro de pago de un pedido.
+/// idempotencyKey previene cobros duplicados.
+/// method es enum (no String libre) por recomendación del experto DB.
+model Payment {
+  id             String         @id @default(uuid())
+  orderId        String         @unique
+  amount         Decimal        @db.Decimal(10, 2)
+  status         PaymentStatus  @default(PENDING)
+  method         PaymentMethod?
+  idempotencyKey String         @unique
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Relations
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+/// Notificación en tiempo real para un usuario.
+/// updatedAt incluido para rastrear cuándo se marcó como leída.
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  orderId   String?
+  type      NotificationType
+  message   String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // Relations
+  user  User   @relation(fields: [userId], references: [id])
+  order Order? @relation(fields: [orderId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([orderId])
+}

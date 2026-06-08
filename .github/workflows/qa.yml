@@ -1,0 +1,47 @@
+name: CD - QA
+
+on:
+  push:
+    branches: [ QA ]
+
+jobs:
+  deploy-qa:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and Push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:qa
+
+    - name: Deploy to EC2 QA
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.QA_EC2_HOST }}
+        username: ${{ secrets.QA_EC2_USER }}
+        key: ${{ secrets.QA_EC2_SSH_KEY }}
+        script: |
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:qa
+          docker stop centraleats-qa || true
+          docker rm centraleats-qa || true
+          docker run -d --name centraleats-qa \
+            -p 3001:3000 \
+            -e PORT=3000 \
+            -e NODE_ENV=production \
+            -e FRONTEND_URL=${{ secrets.QA_FRONTEND_URL }} \
+            -e DATABASE_URL="${{ secrets.QA_DATABASE_URL }}" \
+            -e DIRECT_URL="${{ secrets.QA_DIRECT_URL }}" \
+            -e CLERK_PUBLISHABLE_KEY=${{ secrets.CLERK_PUBLISHABLE_KEY }} \
+            -e CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }} \
+            -e CLERK_WEBHOOK_SECRET=${{ secrets.CLERK_WEBHOOK_SECRET }} \
+            ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:qa
+          docker exec centraleats-qa npx prisma migrate deploy
