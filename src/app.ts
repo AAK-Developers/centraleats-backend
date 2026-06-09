@@ -5,6 +5,7 @@ import { env } from "./config/env";
 import { createOrdersModuleRouter } from "./modules/orders";
 import { createCatalogModuleRouter } from "./modules/catalog";
 import { createVendorModuleRouter } from "./modules/vendors";
+import clerkWebhookRoutes from "./modules/users/presentation/http/routes/clerkWebhookRoutes";
 import { requireAuth } from "./shared/middlewares/requireAuth";
 import { protectedTestRoutes } from "./modules/auth";
 import { errorHandler } from "./shared/middlewares/errorHandler";
@@ -14,9 +15,13 @@ export const createApp = () => {
 
   app.use(
     cors({
-      origin: env.CORS_ORIGIN,
+      origin: env.FRONTEND_URL,
     }),
   );
+
+  // Webhook route must come before express.json() to preserve the raw body for Svix validation
+  app.use("/api/webhooks/clerk", express.raw({ type: "application/json" }), clerkWebhookRoutes);
+
   app.use(express.json());
 
   app.get("/health", (_req, res) => {

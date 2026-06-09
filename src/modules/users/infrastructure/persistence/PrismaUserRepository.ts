@@ -59,4 +59,28 @@ export class PrismaUserRepository implements IUserRepository {
     });
     return this.toDomain(prismaUser);
   }
+  async upsertByExternalId(externalId: string, data: Partial<User>): Promise<User> {
+    const prismaUser = await prisma.user.upsert({
+      where: { clerkId: externalId },
+      create: {
+        clerkId: externalId,
+        email: data.email || "",
+        fullName: data.fullName,
+        avatarUrl: data.avatarUrl,
+        role: "STUDENT",
+      },
+      update: {
+        email: data.email,
+        fullName: data.fullName,
+        avatarUrl: data.avatarUrl,
+      },
+    });
+    return this.toDomain(prismaUser);
+  }
+
+  async deleteByExternalId(externalId: string): Promise<void> {
+    await prisma.user.deleteMany({
+      where: { clerkId: externalId },
+    });
+  }
 }
