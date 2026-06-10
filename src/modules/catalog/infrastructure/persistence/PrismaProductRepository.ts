@@ -30,14 +30,14 @@ export class PrismaProductRepository implements IProductRepository {
     const prismaProducts = await prisma.product.findMany({
       where: { isActive: true },
     });
-    return prismaProducts.map(p => this.toDomain(p));
+    return prismaProducts.map((p: any) => this.toDomain(p));
   }
 
   async listByVendorId(vendorId: string): Promise<Product[]> {
     const prismaProducts = await prisma.product.findMany({
       where: { vendorId },
     });
-    return prismaProducts.map(p => this.toDomain(p));
+    return prismaProducts.map((p: any) => this.toDomain(p));
   }
 
   async create(product: Omit<Product, "id" | "createdAt" | "updatedAt">): Promise<Product> {

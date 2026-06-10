@@ -24,7 +24,7 @@ export class PrismaCategoryRepository implements ICategoryRepository {
     const prismaCategories = await prisma.category.findMany({
       where: { isActive: true },
     });
-    return prismaCategories.map(c => this.toDomain(c));
+    return prismaCategories.map((c: any) => this.toDomain(c));
   }
 
   async create(category: Omit<Category, "id" | "createdAt" | "updatedAt">): Promise<Category> {
