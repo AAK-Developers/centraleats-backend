@@ -10,6 +10,8 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().default("http://localhost:5173"),
   DATABASE_URL: z.string().url(),
   DIRECT_URL: z.string().url().optional(),
+  CLERK_SECRET_KEY: z.string().startsWith("sk_", "CLERK_SECRET_KEY must start with sk_"),
+  CLERK_PUBLISHABLE_KEY: z.string().startsWith("pk_", "CLERK_PUBLISHABLE_KEY must start with pk_").optional(),
   CLERK_WEBHOOK_SECRET: z.string().min(1, "CLERK_WEBHOOK_SECRET is required"),
 });
 
