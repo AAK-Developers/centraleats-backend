@@ -28,7 +28,7 @@ export class PrismaVendorRepository implements IVendorRepository {
     const prismaVendors = await prisma.vendor.findMany({
       where: { isActive: true },
     });
-    return prismaVendors.map(v => this.toDomain(v));
+    return prismaVendors.map((v: any) => this.toDomain(v));
   }
 
   async create(vendor: Omit<Vendor, "id" | "createdAt" | "updatedAt">): Promise<Vendor> {

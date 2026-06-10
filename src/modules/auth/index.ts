@@ -1,3 +1,2 @@
 // Auth Module — CentralEats
-// Clerk integration will be implemented in Fase 9.
-export {};
+export { default as protectedTestRoutes } from "./presentation/http/routes/protectedTestRoutes";
