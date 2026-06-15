@@ -2,6 +2,7 @@ import { Server as HttpServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 
 import { env } from "../../config/env";
+import { getAllowedOrigins } from "../../config/cors";
 
 export const ORDER_SOCKET_EVENTS = [
   "order.created",
@@ -22,8 +23,16 @@ export const ORDER_EVENT_DESCRIPTIONS: Record<(typeof ORDER_SOCKET_EVENTS)[numbe
 export const configureWebSocket = (httpServer: HttpServer): SocketIOServer => {
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: env.CORS_ORIGIN,
+      origin: (origin, callback) => {
+        const allowedOrigins = getAllowedOrigins();
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error(`Origin ${origin} not allowed by CORS`));
+        }
+      },
       methods: ["GET", "POST"],
+      credentials: true,
     },
   });
 

@@ -8,4 +8,5 @@ export interface CreateOrderInput {
 
 export interface IOrderRepository {
   create(input: CreateOrderInput): Promise<Order>;
+  findByUserId(userId: string): Promise<any[]>;
 }
