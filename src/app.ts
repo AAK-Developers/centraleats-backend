@@ -2,9 +2,11 @@ import cors from "cors";
 import express from "express";
 
 import { env } from "./config/env";
-import { createOrdersModuleRouter } from "./modules/orders";
+import { getAllowedOrigins } from "./config/cors";
+import { createOrdersModuleRouter, createStudentModuleRouter } from "./modules/orders";
 import { createCatalogModuleRouter } from "./modules/catalog";
 import { createVendorModuleRouter } from "./modules/vendors";
+import { createUsersModuleRouter } from "./modules/users";
 import clerkWebhookRoutes from "./modules/users/presentation/http/routes/clerkWebhookRoutes";
 import { requireAuth } from "./shared/middlewares/requireAuth";
 import { protectedTestRoutes } from "./modules/auth";
@@ -15,7 +17,15 @@ export const createApp = () => {
 
   app.use(
     cors({
-      origin: env.FRONTEND_URL,
+      origin: (origin, callback) => {
+        const allowedOrigins = getAllowedOrigins();
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error(`Origin ${origin} not allowed by CORS`));
+        }
+      },
+      credentials: true,
     }),
   );
 
@@ -28,9 +38,12 @@ export const createApp = () => {
     res.status(200).json({ status: "ok" });
   });
 
+  app.use("/api/users", createUsersModuleRouter());
+  app.use("/api/student", createStudentModuleRouter());
   app.use("/api/orders", createOrdersModuleRouter());
   app.use("/api", createCatalogModuleRouter());
   app.use("/api/vendors", createVendorModuleRouter());
+  app.use("/api/restaurants", createVendorModuleRouter());
   app.use("/api/protected-test", requireAuth, protectedTestRoutes);
 
   app.use(errorHandler);
