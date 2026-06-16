@@ -21,4 +21,14 @@ export class InMemoryOrderRepository implements IOrderRepository {
 
     return order;
   }
+
+  async findByUserId(userId: string): Promise<any[]> {
+    return this.orders
+      .filter((order) => order.userId === userId)
+      .map((order) => ({
+        ...order,
+        vendor: { name: "Mock Vendor" },
+        items: [],
+      }));
+  }
 }

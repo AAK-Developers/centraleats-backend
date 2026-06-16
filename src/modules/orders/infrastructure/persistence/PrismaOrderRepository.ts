@@ -51,4 +51,45 @@ export class PrismaOrderRepository implements IOrderRepository {
     });
     return this.toDomain(prismaOrder);
   }
+
+  async findByUserId(userId: string): Promise<any[]> {
+    const prismaOrders = await prisma.order.findMany({
+      where: { userId },
+      include: {
+        vendor: {
+          select: {
+            name: true,
+          },
+        },
+        items: {
+          include: {
+            product: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return prismaOrders.map(order => {
+      // Map database order status to Domain OrderStatus using toDomain logic
+      const domainOrder = this.toDomain(order);
+      return {
+        ...domainOrder,
+        vendor: order.vendor,
+        items: order.items.map(item => ({
+          id: item.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: Number(item.unitPrice.toString()),
+          productName: item.product.name,
+        })),
+      };
+    });
+  }
 }
