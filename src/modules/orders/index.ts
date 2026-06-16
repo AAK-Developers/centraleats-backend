@@ -1,7 +1,6 @@
 import { Router } from "express";
 
 import { CreateOrderUseCase } from "./application/use-cases/CreateOrderUseCase";
-import { InMemoryOrderRepository } from "./infrastructure/persistence/InMemoryOrderRepository";
 import { CreateOrderController } from "./presentation/http/controllers/CreateOrderController";
 import { buildOrderRoutes } from "./presentation/http/routes/orderRoutes";
 import { PrismaOrderRepository } from "./infrastructure/persistence/PrismaOrderRepository";
@@ -10,7 +9,7 @@ import { GetStudentOrderHistoryController } from "./presentation/http/controller
 import { requireAuth } from "../../shared/middlewares/requireAuth";
 
 export const createOrdersModuleRouter = (): Router => {
-  const orderRepository = new InMemoryOrderRepository();
+  const orderRepository = new PrismaOrderRepository();
   const createOrderUseCase = new CreateOrderUseCase(orderRepository);
   const createOrderController = new CreateOrderController(createOrderUseCase);
 

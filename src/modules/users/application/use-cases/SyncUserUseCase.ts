@@ -15,6 +15,7 @@ export class SyncUserUseCase {
         email: dto.email,
         fullName: dto.fullName,
         avatarUrl: dto.avatarUrl,
+        role: dto.role,
       });
     } else if (dto.eventType === 'deleted') {
       await this.userRepository.deleteByExternalId(dto.externalId);

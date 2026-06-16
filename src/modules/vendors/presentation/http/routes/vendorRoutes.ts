@@ -4,6 +4,7 @@ import { RegisterVendorController } from "../controllers/RegisterVendorControlle
 import { RegisterVendorUseCase } from "../../../application/use-cases/RegisterVendorUseCase";
 import { PrismaVendorRepository } from "../../../infrastructure/persistence/PrismaVendorRepository";
 import { requireAuth } from "../../../../../shared/middlewares/requireAuth";
+import { requireRole } from "../../../../../shared/middlewares/requireRole";
 
 export const createVendorModuleRouter = (): Router => {
   const router = Router();
@@ -15,7 +16,7 @@ export const createVendorModuleRouter = (): Router => {
   const registerVendorController = new RegisterVendorController(registerVendorUseCase);
 
   router.get("/", (req, res) => getVendorsController.handle(req, res));
-  router.post("/register", requireAuth, (req, res, next) => registerVendorController.handle(req, res, next));
+  router.post("/register", requireAuth, requireRole(["VENDOR"]), (req, res, next) => registerVendorController.handle(req, res, next));
 
   return router;
 };

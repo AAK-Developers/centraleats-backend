@@ -9,7 +9,7 @@ import { createVendorModuleRouter } from "./modules/vendors";
 import { createUsersModuleRouter } from "./modules/users";
 import clerkWebhookRoutes from "./modules/users/presentation/http/routes/clerkWebhookRoutes";
 import { requireAuth } from "./shared/middlewares/requireAuth";
-import { protectedTestRoutes } from "./modules/auth";
+import { protectedTestRoutes, authRoutes } from "./modules/auth";
 import { errorHandler } from "./shared/middlewares/errorHandler";
 
 export const createApp = () => {
@@ -44,6 +44,7 @@ export const createApp = () => {
   app.use("/api", createCatalogModuleRouter());
   app.use("/api/vendors", createVendorModuleRouter());
   app.use("/api/restaurants", createVendorModuleRouter());
+  app.use("/api/auth", authRoutes);
   app.use("/api/protected-test", requireAuth, protectedTestRoutes);
 
   app.use(errorHandler);
