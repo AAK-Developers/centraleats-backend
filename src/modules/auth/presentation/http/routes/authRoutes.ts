@@ -1,10 +1,13 @@
 import { Router, Request, Response, NextFunction } from "express";
+import { createClerkClient } from "@clerk/backend";
+import { env } from "../../../../../config/env";
 import { requireAuth } from "../../../../../shared/middlewares/requireAuth";
 import { AuthMeResponseDTO } from "../../../application/dto/AuthMeResponseDTO";
 import { PrismaUserRepository } from "../../../../users/infrastructure/persistence/PrismaUserRepository";
 
 const router = Router();
 const userRepository = new PrismaUserRepository();
+const clerkClient = createClerkClient({ secretKey: env.CLERK_SECRET_KEY });
 
 // GET /api/auth/me
 router.get("/me", requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -16,11 +19,40 @@ router.get("/me", requireAuth, async (req: Request, res: Response, next: NextFun
       return;
     }
 
-    const user = await userRepository.findByClerkId(clerkId);
+    let user = await userRepository.findByClerkId(clerkId);
 
+    // Fallback: If user exists in Clerk but not in local database (webhook failed or delayed)
     if (!user) {
-      res.status(404).json({ error: "User profile not found" });
-      return;
+      try {
+        let email = "";
+        let fullName = null;
+        let avatarUrl = null;
+
+        const clerkUser = await clerkClient.users.getUser(clerkId);
+        if (clerkUser) {
+          email = clerkUser.emailAddresses[0]?.emailAddress || "";
+          fullName = `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || null;
+          avatarUrl = clerkUser.imageUrl || null;
+        }
+
+        if (!email) {
+          res.status(400).json({ error: "Email is required and could not be retrieved from Clerk" });
+          return;
+        }
+
+        user = await userRepository.create({
+          clerkId,
+          email,
+          fullName,
+          avatarUrl,
+          role: "STUDENT",
+          isActive: true,
+        });
+      } catch (err: any) {
+        console.error("[authRoutes] Failed to auto-register user on /me:", err.message);
+        res.status(404).json({ error: `User profile not found in system and auto-registration failed: ${err.message}` });
+        return;
+      }
     }
 
     if (!user.isActive) {
