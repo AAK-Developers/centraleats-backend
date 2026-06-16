@@ -7,6 +7,7 @@ export class AuthMeResponseDTO {
   public readonly avatarUrl: string | null;
   public readonly role: "STUDENT" | "VENDOR" | "ADMIN";
   public readonly isActive: boolean;
+  public readonly clerkId: string;
 
   constructor(user: User) {
     this.id = user.id;
@@ -15,5 +16,6 @@ export class AuthMeResponseDTO {
     this.avatarUrl = user.avatarUrl;
     this.role = user.role;
     this.isActive = user.isActive;
+    this.clerkId = user.clerkId;
   }
 }

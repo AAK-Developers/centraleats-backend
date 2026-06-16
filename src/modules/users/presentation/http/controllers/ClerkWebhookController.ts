@@ -23,7 +23,7 @@ export class ClerkWebhookController {
       }
 
       const eventType = evt.type;
-      const { id, email_addresses, first_name, last_name, image_url } = evt.data;
+      const { id, email_addresses, first_name, last_name, image_url, public_metadata } = evt.data;
 
       let mappedEventType: 'created' | 'updated' | 'deleted';
       if (eventType === 'user.created') mappedEventType = 'created';
@@ -36,12 +36,24 @@ export class ClerkWebhookController {
 
       const primaryEmail = email_addresses && email_addresses.length > 0 ? email_addresses[0].email_address : undefined;
 
+      let role: "STUDENT" | "VENDOR" | "ADMIN" | undefined = undefined;
+      if (public_metadata && typeof public_metadata === "object") {
+        const rawRole = (public_metadata as any).role;
+        if (typeof rawRole === "string") {
+          const upperRole = rawRole.toUpperCase();
+          if (upperRole === "STUDENT" || upperRole === "VENDOR" || upperRole === "ADMIN") {
+            role = upperRole as "STUDENT" | "VENDOR" | "ADMIN";
+          }
+        }
+      }
+
       const dto: UserSyncDTO = {
         eventType: mappedEventType,
         externalId: id,
         email: primaryEmail,
         fullName: `${first_name || ''} ${last_name || ''}`.trim() || undefined,
         avatarUrl: image_url,
+        role,
       };
 
       try {

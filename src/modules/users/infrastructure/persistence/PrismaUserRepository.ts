@@ -67,12 +67,13 @@ export class PrismaUserRepository implements IUserRepository {
         email: data.email || "",
         fullName: data.fullName,
         avatarUrl: data.avatarUrl,
-        role: "STUDENT",
+        role: data.role ? (data.role as UserRole) : "STUDENT",
       },
       update: {
         email: data.email,
         fullName: data.fullName,
         avatarUrl: data.avatarUrl,
+        role: data.role ? (data.role as UserRole) : undefined,
       },
     });
     return this.toDomain(prismaUser);

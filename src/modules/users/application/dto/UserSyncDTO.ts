@@ -4,4 +4,5 @@ export interface UserSyncDTO {
   email?: string;
   fullName?: string;
   avatarUrl?: string;
+  role?: "STUDENT" | "VENDOR" | "ADMIN";
 }
