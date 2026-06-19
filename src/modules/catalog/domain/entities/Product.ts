@@ -6,6 +6,7 @@ export class Product {
     public readonly price: number,
     public readonly stock: number,
     public readonly imageUrl: string | null,
+    public readonly isAvailable: boolean,
     public readonly isActive: boolean,
     public readonly vendorId: string,
     public readonly categoryId: string,

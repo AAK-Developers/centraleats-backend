@@ -7,8 +7,9 @@ export class RegisterVendorController {
 
   async handle(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { name, description, location, phone } = req.body;
+      const { name, description, location, phone, openingTime, closingTime } = req.body;
       const clerkId = req.auth?.userId;
+      const imageFile = req.file;
 
       if (!clerkId) {
         throw new AppError("Authentication required to register a restaurant", 401);
@@ -24,6 +25,13 @@ export class RegisterVendorController {
         description,
         location,
         phone,
+        openingTime,
+        closingTime,
+        image: imageFile ? {
+          buffer: imageFile.buffer,
+          originalname: imageFile.originalname,
+          mimetype: imageFile.mimetype
+        } : undefined
       });
 
       res.status(201).json({
@@ -35,6 +43,9 @@ export class RegisterVendorController {
           description: vendor.description,
           location: vendor.location,
           phone: vendor.phone,
+          logoUrl: vendor.logoUrl,
+          openingTime: vendor.openingTime,
+          closingTime: vendor.closingTime,
           isActive: vendor.isActive,
           ownerId: vendor.ownerId,
         },
