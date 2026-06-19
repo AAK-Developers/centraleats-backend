@@ -4,13 +4,15 @@ import { CreateOrderUseCase } from "./application/use-cases/CreateOrderUseCase";
 import { CreateOrderController } from "./presentation/http/controllers/CreateOrderController";
 import { buildOrderRoutes } from "./presentation/http/routes/orderRoutes";
 import { PrismaOrderRepository } from "./infrastructure/persistence/PrismaOrderRepository";
+import { PrismaProductRepository } from "../catalog/infrastructure/persistence/PrismaProductRepository";
 import { GetStudentOrderHistoryUseCase } from "./application/use-cases/GetStudentOrderHistoryUseCase";
 import { GetStudentOrderHistoryController } from "./presentation/http/controllers/GetStudentOrderHistoryController";
 import { requireAuth } from "../../shared/middlewares/requireAuth";
 
 export const createOrdersModuleRouter = (): Router => {
   const orderRepository = new PrismaOrderRepository();
-  const createOrderUseCase = new CreateOrderUseCase(orderRepository);
+  const productRepository = new PrismaProductRepository();
+  const createOrderUseCase = new CreateOrderUseCase(orderRepository, productRepository);
   const createOrderController = new CreateOrderController(createOrderUseCase);
 
   return buildOrderRoutes(createOrderController);
