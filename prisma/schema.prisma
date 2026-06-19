@@ -97,6 +97,9 @@ model Vendor {
   description String?
   location    String? // String libre para MVP. Coordenadas post-MVP.
   phone       String?
+  logoUrl     String?
+  openingTime String?
+  closingTime String?
   isActive    Boolean  @default(true)
   ownerId     String // SIN @unique → permite 1:N (User puede tener N vendors)
   createdAt   DateTime @default(now())
@@ -129,10 +132,11 @@ model Category {
 model Product {
   id          String   @id @default(uuid())
   name        String
-  description String?
+  description String
   price       Decimal  @db.Decimal(10, 2)
   stock       Int      @default(0)
   imageUrl    String?
+  isAvailable Boolean  @default(true)
   isActive    Boolean  @default(true)
   vendorId    String
   categoryId  String
