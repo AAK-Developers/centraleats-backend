@@ -117,6 +117,10 @@ jobs:
           else
             echo "==== ERROR: SMOKE TEST O MIGRACIÓN FALLÓ. Iniciando rollback automático ===="
             
+            echo "=== DIAGNÓSTICO: LOGS DEL CONTENEDOR NUEVO ==="
+            docker logs ${{ inputs.container_name }} || true
+            echo "=============================================="
+            
             # Detener y eliminar contenedor dañado
             docker stop ${{ inputs.container_name }} || true
             docker rm -f ${{ inputs.container_name }} || true
