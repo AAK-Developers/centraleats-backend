@@ -43,6 +43,7 @@ jobs:
 
   trigger-frontend-deploy:
     needs: deploy
+    if: secrets.FRONTEND_DEPLOY_TOKEN != '' && secrets.FRONTEND_REPO != ''
     runs-on: ubuntu-latest
     steps:
     - name: Trigger Frontend Deployment Workflow
