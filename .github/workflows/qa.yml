@@ -14,15 +14,30 @@ jobs:
     steps:
     - name: Verify Dev Pipeline Success
       run: |
-        echo "Checking if commit ${{ github.sha }} successfully passed Dev pipeline..."
-        URL="https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=${{ github.sha }}&status=success"
+        SHA_TO_CHECK="${{ github.sha }}"
+        echo "Current commit SHA: $SHA_TO_CHECK"
+        
+        # Query associated PRs for the current commit
+        PR_URL="https://api.github.com/repos/${{ github.repository }}/commits/$SHA_TO_CHECK/pulls"
+        echo "Querying pulls: $PR_URL"
+        PR_INFO=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "$PR_URL")
+        
+        HEAD_SHA=$(echo "$PR_INFO" | jq -r '.[0].head.sha // empty')
+        if [ -n "$HEAD_SHA" ] && [ "$HEAD_SHA" != "null" ]; then
+          echo "Found associated PR. Source head commit SHA to check: $HEAD_SHA"
+          SHA_TO_CHECK="$HEAD_SHA"
+        else
+          echo "No associated PR found. Checking current SHA directly."
+        fi
+        
+        echo "Checking if commit $SHA_TO_CHECK successfully passed Dev pipeline..."
+        URL="https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$SHA_TO_CHECK&status=success"
         RUNS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "$URL")
         
-        # Filtrar si la corrida de desarrollo fue exitosa
         DEV_PASSED=$(echo "$RUNS" | jq '.workflow_runs[] | select(.name == "CI/CD - Dev Environment")')
         
         if [ -z "$DEV_PASSED" ]; then
-          echo "❌ ERROR: Este commit no ha pasado el workflow 'CI/CD - Dev Environment' con éxito."
+          echo "❌ ERROR: El commit de origen ($SHA_TO_CHECK) no ha pasado el workflow 'CI/CD - Dev Environment' con éxito."
           echo "Por favor, despliega y valida en 'dev' antes de fusionar a QA."
           exit 1
         else
