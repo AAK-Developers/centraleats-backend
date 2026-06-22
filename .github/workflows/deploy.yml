@@ -50,9 +50,12 @@ jobs:
 
     steps:
     - name: Notify Deploy Start
-      if: secrets.NOTIFICATION_WEBHOOK_URL != ''
       run: |
-        curl -H "Content-Type: application/json" -X POST -d '{"text": "🚀 *Despliegue iniciado* en el entorno *${{ inputs.environment }}* para centraleats-backend:${{ inputs.image_tag }}"}' "${{ secrets.NOTIFICATION_WEBHOOK_URL }}" || true
+        if [ -n "${{ secrets.NOTIFICATION_WEBHOOK_URL }}" ]; then
+          curl -H "Content-Type: application/json" -X POST -d '{"text": "🚀 *Despliegue iniciado* en el entorno *${{ inputs.environment }}* para centraleats-backend:${{ inputs.image_tag }}"}' "${{ secrets.NOTIFICATION_WEBHOOK_URL }}" || true
+        else
+          echo "No notification webhook configured."
+        fi
 
     - name: Deploy via SSH
       uses: appleboy/ssh-action@v1.0.3
@@ -132,11 +135,19 @@ jobs:
           fi
 
     - name: Notify Deploy Success
-      if: success() && secrets.NOTIFICATION_WEBHOOK_URL != ''
+      if: success()
       run: |
-        curl -H "Content-Type: application/json" -X POST -d '{"text": "✅ *Despliegue exitoso* en el entorno *${{ inputs.environment }}*. El backend está en línea y funcionando."}' "${{ secrets.NOTIFICATION_WEBHOOK_URL }}" || true
+        if [ -n "${{ secrets.NOTIFICATION_WEBHOOK_URL }}" ]; then
+          curl -H "Content-Type: application/json" -X POST -d '{"text": "✅ *Despliegue exitoso* en el entorno *${{ inputs.environment }}*. El backend está en línea y funcionando."}' "${{ secrets.NOTIFICATION_WEBHOOK_URL }}" || true
+        else
+          echo "No notification webhook configured."
+        fi
 
     - name: Notify Deploy Failure
-      if: failure() && secrets.NOTIFICATION_WEBHOOK_URL != ''
+      if: failure()
       run: |
-        curl -H "Content-Type: application/json" -X POST -d '{"text": "🚨 *¡FALLO DE DESPLIEGUE!* en el entorno *${{ inputs.environment }}*. Se ha realizado rollback automático a la versión anterior stable."}' "${{ secrets.NOTIFICATION_WEBHOOK_URL }}" || true
+        if [ -n "${{ secrets.NOTIFICATION_WEBHOOK_URL }}" ]; then
+          curl -H "Content-Type: application/json" -X POST -d '{"text": "🚨 *¡FALLO DE DESPLIEGUE!* en el entorno *${{ inputs.environment }}*. Se ha realizado rollback automático a la versión anterior stable."}' "${{ secrets.NOTIFICATION_WEBHOOK_URL }}" || true
+        else
+          echo "No notification webhook configured."
+        fi
