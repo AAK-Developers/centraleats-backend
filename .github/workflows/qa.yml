@@ -1,0 +1,45 @@
+name: CD - QA Environment
+
+on:
+  push:
+    branches: [ QA ]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: ci
+    uses: ./.github/workflows/build-push.yml
+    with:
+      image_tag: qa
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  deploy:
+    needs: build
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: qa
+      image_tag: qa
+      container_name: centraleats-qa
+      host_port: "3001"
+    secrets:
+      EC2_HOST: ${{ secrets.QA_EC2_HOST }}
+      EC2_USER: ${{ secrets.QA_EC2_USER }}
+      EC2_SSH_KEY: ${{ secrets.QA_EC2_SSH_KEY }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DATABASE_URL: ${{ secrets.QA_DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.QA_DIRECT_URL }}
+      CLERK_PUBLISHABLE_KEY: ${{ secrets.QA_CLERK_PUBLISHABLE_KEY }}
+      CLERK_SECRET_KEY: ${{ secrets.QA_CLERK_SECRET_KEY }}
+      CLERK_WEBHOOK_SECRET: ${{ secrets.QA_CLERK_WEBHOOK_SECRET }}
+      FRONTEND_URL: ${{ secrets.QA_FRONTEND_URL }}
+      SUPABASE_PROJECT_URL: ${{ secrets.QA_SUPABASE_PROJECT_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.QA_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+      NOTIFICATION_WEBHOOK_URL: ${{ secrets.NOTIFICATION_WEBHOOK_URL }}
