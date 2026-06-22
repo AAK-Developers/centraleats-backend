@@ -38,7 +38,7 @@ on:
         required: true
       CLERK_WEBHOOK_SECRET:
         required: true
-       FRONTEND_URL:
+      FRONTEND_URL:
         required: true
       SUPABASE_PROJECT_URL:
         required: true
