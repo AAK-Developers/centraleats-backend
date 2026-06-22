@@ -4,44 +4,39 @@ on:
   push:
     branches: [ QA ]
 
+permissions:
+  contents: read
+
 jobs:
-  deploy-qa:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
+  ci:
+    uses: ./.github/workflows/ci.yml
 
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+  build:
+    needs: ci
+    uses: ./.github/workflows/build-push.yml
+    with:
+      image_tag: qa
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Build and Push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:qa
-
-    - name: Deploy to EC2 QA
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.QA_EC2_HOST }}
-        username: ${{ secrets.QA_EC2_USER }}
-        key: ${{ secrets.QA_EC2_SSH_KEY }}
-        script: |
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:qa
-          docker stop centraleats-qa || true
-          docker rm centraleats-qa || true
-          docker run -d --name centraleats-qa \
-            -p 3001:3000 \
-            -e PORT=3000 \
-            -e NODE_ENV=production \
-            -e FRONTEND_URL=${{ secrets.QA_FRONTEND_URL }} \
-            -e DATABASE_URL="${{ secrets.QA_DATABASE_URL }}" \
-            -e DIRECT_URL="${{ secrets.QA_DIRECT_URL }}" \
-            -e CLERK_PUBLISHABLE_KEY=${{ secrets.CLERK_PUBLISHABLE_KEY }} \
-            -e CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }} \
-            -e CLERK_WEBHOOK_SECRET=${{ secrets.CLERK_WEBHOOK_SECRET }} \
-            ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:qa
-          docker exec -e DIRECT_URL="${{ secrets.QA_DIRECT_URL }}" centraleats-qa npx prisma migrate deploy
+  deploy:
+    needs: build
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: qa
+      image_tag: qa
+      container_name: centraleats-qa
+      host_port: "3001"
+    secrets:
+      EC2_HOST: ${{ secrets.QA_EC2_HOST }}
+      EC2_USER: ${{ secrets.QA_EC2_USER }}
+      EC2_SSH_KEY: ${{ secrets.QA_EC2_SSH_KEY }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DATABASE_URL: ${{ secrets.QA_DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.QA_DIRECT_URL }}
+      CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+      CLERK_WEBHOOK_SECRET: ${{ secrets.CLERK_WEBHOOK_SECRET }}
+      FRONTEND_URL: ${{ secrets.QA_FRONTEND_URL }}
+      NOTIFICATION_WEBHOOK_URL: ${{ secrets.NOTIFICATION_WEBHOOK_URL }}
