@@ -38,7 +38,13 @@ on:
         required: true
       CLERK_WEBHOOK_SECRET:
         required: true
-      FRONTEND_URL:
+       FRONTEND_URL:
+        required: true
+      SUPABASE_PROJECT_URL:
+        required: true
+      SUPABASE_ANON_KEY:
+        required: true
+      SUPABASE_SERVICE_ROLE_KEY:
         required: true
       NOTIFICATION_WEBHOOK_URL:
         required: false
@@ -93,6 +99,9 @@ jobs:
             -e CLERK_PUBLISHABLE_KEY='${{ secrets.CLERK_PUBLISHABLE_KEY }}' \
             -e CLERK_SECRET_KEY='${{ secrets.CLERK_SECRET_KEY }}' \
             -e CLERK_WEBHOOK_SECRET='${{ secrets.CLERK_WEBHOOK_SECRET }}' \
+            -e SUPABASE_PROJECT_URL='${{ secrets.SUPABASE_PROJECT_URL }}' \
+            -e SUPABASE_ANON_KEY='${{ secrets.SUPABASE_ANON_KEY }}' \
+            -e SUPABASE_SERVICE_ROLE_KEY='${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}' \
             ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:${{ inputs.image_tag }}
           
           # Ejecutar migraciones en la base de datos (Supabase)
