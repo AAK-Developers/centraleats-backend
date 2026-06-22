@@ -1,0 +1,142 @@
+name: Reusable Deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: "Environment to deploy to (e.g., 'qa', 'production')"
+      image_tag:
+        required: true
+        type: string
+        description: "Docker image tag to deploy (e.g., 'qa', 'latest')"
+      container_name:
+        required: true
+        type: string
+        description: "Name of the container to run (e.g., 'centraleats-qa', 'centraleats-prod')"
+      host_port:
+        required: true
+        type: string
+        description: "External port on the EC2 host (e.g., '3001', '3000')"
+    secrets:
+      EC2_HOST:
+        required: true
+      EC2_USER:
+        required: true
+      EC2_SSH_KEY:
+        required: true
+      DOCKERHUB_USERNAME:
+        required: true
+      DATABASE_URL:
+        required: true
+      DIRECT_URL:
+        required: true
+      CLERK_PUBLISHABLE_KEY:
+        required: true
+      CLERK_SECRET_KEY:
+        required: true
+      CLERK_WEBHOOK_SECRET:
+        required: true
+      FRONTEND_URL:
+        required: true
+      NOTIFICATION_WEBHOOK_URL:
+        required: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+    - name: Notify Deploy Start
+      if: secrets.NOTIFICATION_WEBHOOK_URL != ''
+      run: |
+        curl -H "Content-Type: application/json" -X POST -d '{"text": "🚀 *Despliegue iniciado* en el entorno *${{ inputs.environment }}* para centraleats-backend:${{ inputs.image_tag }}"}' "${{ secrets.NOTIFICATION_WEBHOOK_URL }}" || true
+
+    - name: Deploy via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          echo "==== Iniciando despliegue de ${{ inputs.container_name }} (Tag: ${{ inputs.image_tag }}) ===="
+          
+          # Pull de la imagen más reciente
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:${{ inputs.image_tag }}
+          
+          # Verificar si existe contenedor previo
+          if docker ps -a --format '{{.Names}}' | grep -Eq "^${{ inputs.container_name }}$"; then
+            echo "Respaldando contenedor actual..."
+            docker rm -f ${{ inputs.container_name }}-old || true
+            docker stop ${{ inputs.container_name }} || true
+            docker rename ${{ inputs.container_name }} ${{ inputs.container_name }}-old || true
+            HAS_OLD=true
+          else
+            echo "No existe un contenedor previo para respaldar."
+            HAS_OLD=false
+          fi
+          
+          # Levantar nueva versión
+          echo "Iniciando nueva versión..."
+          docker run -d --name ${{ inputs.container_name }} \
+            -p ${{ inputs.host_port }}:3000 \
+            -e PORT=3000 \
+            -e NODE_ENV=production \
+            -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
+            -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            -e DIRECT_URL="${{ secrets.DIRECT_URL }}" \
+            -e CLERK_PUBLISHABLE_KEY="${{ secrets.CLERK_PUBLISHABLE_KEY }}" \
+            -e CLERK_SECRET_KEY="${{ secrets.CLERK_SECRET_KEY }}" \
+            -e CLERK_WEBHOOK_SECRET="${{ secrets.CLERK_WEBHOOK_SECRET }}" \
+            ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:${{ inputs.image_tag }}
+          
+          # Ejecutar migraciones en la base de datos (Supabase)
+          echo "Ejecutando prisma migrate deploy..."
+          if ! docker exec -e DIRECT_URL="${{ secrets.DIRECT_URL }}" ${{ inputs.container_name }} npx prisma migrate deploy; then
+            echo "Error: La migración de Prisma falló."
+            MIGRATION_FAILED=true
+          else
+            MIGRATION_FAILED=false
+          fi
+
+          # Esperar que inicialice antes del Smoke Test
+          echo "Esperando 10 segundos para verificar salud de la app..."
+          sleep 10
+          
+          # Smoke Test
+          if [ "$MIGRATION_FAILED" = "false" ] && (curl -s -f http://localhost:${{ inputs.host_port }}/health || curl -s -f http://localhost:${{ inputs.host_port }}/); then
+            echo "==== SMOKE TEST EXITOSO. Limpiando contenedor antiguo ===="
+            if [ "$HAS_OLD" = "true" ]; then
+              docker rm -f ${{ inputs.container_name }}-old || true
+            fi
+          else
+            echo "==== ERROR: SMOKE TEST O MIGRACIÓN FALLÓ. Iniciando rollback automático ===="
+            
+            # Detener y eliminar contenedor dañado
+            docker stop ${{ inputs.container_name }} || true
+            docker rm -f ${{ inputs.container_name }} || true
+            
+            # Reestablecer contenedor viejo si existía
+            if [ "$HAS_OLD" = "true" ]; then
+              echo "Restaurando contenedor anterior..."
+              docker rename ${{ inputs.container_name }}-old ${{ inputs.container_name }} || true
+              docker start ${{ inputs.container_name }} || true
+              echo "Contenedor anterior restaurado y funcionando."
+            else
+              echo "No existe contenedor anterior para restaurar."
+            fi
+            
+            exit 1
+          fi
+
+    - name: Notify Deploy Success
+      if: success() && secrets.NOTIFICATION_WEBHOOK_URL != ''
+      run: |
+        curl -H "Content-Type: application/json" -X POST -d '{"text": "✅ *Despliegue exitoso* en el entorno *${{ inputs.environment }}*. El backend está en línea y funcionando."}' "${{ secrets.NOTIFICATION_WEBHOOK_URL }}" || true
+
+    - name: Notify Deploy Failure
+      if: failure() && secrets.NOTIFICATION_WEBHOOK_URL != ''
+      run: |
+        curl -H "Content-Type: application/json" -X POST -d '{"text": "🚨 *¡FALLO DE DESPLIEGUE!* en el entorno *${{ inputs.environment }}*. Se ha realizado rollback automático a la versión anterior stable."}' "${{ secrets.NOTIFICATION_WEBHOOK_URL }}" || true
