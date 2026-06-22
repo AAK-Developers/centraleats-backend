@@ -7,67 +7,13 @@ on:
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
-  gate-check:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Verify QA Pipeline Success
-      run: |
-        SHA_TO_CHECK="${{ github.sha }}"
-        echo "Current commit SHA: $SHA_TO_CHECK"
-        
-        # Query associated PRs for the current commit
-        PR_URL="https://api.github.com/repos/${{ github.repository }}/commits/$SHA_TO_CHECK/pulls"
-        echo "Querying pulls: $PR_URL"
-        PR_INFO=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "$PR_URL")
-        
-        HEAD_SHA=$(echo "$PR_INFO" | jq -r '.[0].head.sha // empty')
-        if [ -n "$HEAD_SHA" ] && [ "$HEAD_SHA" != "null" ]; then
-          echo "Found associated PR. Source head commit SHA to check: $HEAD_SHA"
-          SHA_TO_CHECK="$HEAD_SHA"
-        else
-          echo "No associated PR found. Checking current SHA directly."
-        fi
-        
-        echo "Checking if commit $SHA_TO_CHECK successfully passed QA pipeline..."
-        URL="https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$SHA_TO_CHECK&status=success"
-        RUNS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "$URL")
-        
-        QA_PASSED=$(echo "$RUNS" | jq '.workflow_runs[] | select(.name == "CD - QA Environment")')
-        
-        if [ -z "$QA_PASSED" ]; then
-          echo "❌ ERROR: El commit de origen ($SHA_TO_CHECK) no ha pasado el workflow 'CD - QA Environment' con éxito."
-          echo "Por favor, despliega y valida en 'QA' antes de promocionar a Producción."
-          exit 1
-        else
-          echo "✅ Validación de QA completada con éxito."
-        fi
+  ci:
+    uses: ./.github/workflows/ci.yml
 
-  check-image:
-    needs: gate-check
-    runs-on: ubuntu-latest
-    outputs:
-      exists: ${{ steps.check.outputs.exists }}
-    steps:
-    - name: Check if Docker image already exists on Docker Hub
-      id: check
-      run: |
-        IMAGE_TAG="sha-${{ github.sha }}"
-        echo "Checking for tag: $IMAGE_TAG"
-        URL="https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend/tags/$IMAGE_TAG/"
-        if curl -s -f -o /dev/null "$URL"; then
-          echo "exists=true" >> $GITHUB_OUTPUT
-          echo "✅ La imagen ya existe en Docker Hub. Reutilizaremos esta imagen."
-        else
-          echo "exists=false" >> $GITHUB_OUTPUT
-          echo "ℹ️ La imagen no existe. Se requiere compilación."
-        fi
-
-  build-new:
-    needs: check-image
-    if: needs.check-image.outputs.exists != 'true'
+  build:
+    needs: ci
     uses: ./.github/workflows/build-push.yml
     with:
       image_tag: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
@@ -75,31 +21,12 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
-  tag-existing:
-    needs: check-image
-    if: needs.check-image.outputs.exists == 'true'
-    runs-on: ubuntu-latest
-    steps:
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-    - name: Tag and Push Existing Image
-      run: |
-        PRIMARY_TAG="${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}"
-        echo "Tagging existing sha-${{ github.sha }} image as $PRIMARY_TAG..."
-        docker pull ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:sha-${{ github.sha }}
-        docker tag ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:sha-${{ github.sha }} ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:$PRIMARY_TAG
-        docker push ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:$PRIMARY_TAG
-
   deploy:
-    needs: [ check-image, build-new, tag-existing ]
-    if: always() && needs.check-image.result == 'success' && (needs.build-new.result == 'success' || needs.build-new.result == 'skipped') && (needs.tag-existing.result == 'success' || needs.tag-existing.result == 'skipped')
+    needs: build
     uses: ./.github/workflows/deploy.yml
     with:
       environment: production
-      image_tag: sha-${{ github.sha }}
+      image_tag: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
       container_name: centraleats-prod
       host_port: "3000"
     secrets:
