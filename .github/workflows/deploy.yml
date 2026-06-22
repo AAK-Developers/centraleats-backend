@@ -87,17 +87,17 @@ jobs:
             -p ${{ inputs.host_port }}:3000 \
             -e PORT=3000 \
             -e NODE_ENV=production \
-            -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
-            -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
-            -e DIRECT_URL="${{ secrets.DIRECT_URL }}" \
-            -e CLERK_PUBLISHABLE_KEY="${{ secrets.CLERK_PUBLISHABLE_KEY }}" \
-            -e CLERK_SECRET_KEY="${{ secrets.CLERK_SECRET_KEY }}" \
-            -e CLERK_WEBHOOK_SECRET="${{ secrets.CLERK_WEBHOOK_SECRET }}" \
+            -e FRONTEND_URL='${{ secrets.FRONTEND_URL }}' \
+            -e DATABASE_URL='${{ secrets.DATABASE_URL }}' \
+            -e DIRECT_URL='${{ secrets.DIRECT_URL }}' \
+            -e CLERK_PUBLISHABLE_KEY='${{ secrets.CLERK_PUBLISHABLE_KEY }}' \
+            -e CLERK_SECRET_KEY='${{ secrets.CLERK_SECRET_KEY }}' \
+            -e CLERK_WEBHOOK_SECRET='${{ secrets.CLERK_WEBHOOK_SECRET }}' \
             ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:${{ inputs.image_tag }}
           
           # Ejecutar migraciones en la base de datos (Supabase)
           echo "Ejecutando prisma migrate deploy..."
-          if ! docker exec -e DIRECT_URL="${{ secrets.DIRECT_URL }}" ${{ inputs.container_name }} npx prisma migrate deploy; then
+          if ! docker exec -e DIRECT_URL='${{ secrets.DIRECT_URL }}' ${{ inputs.container_name }} npx prisma migrate deploy; then
             echo "Error: La migración de Prisma falló."
             MIGRATION_FAILED=true
           else

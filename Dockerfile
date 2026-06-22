@@ -9,7 +9,7 @@ RUN apk add --no-cache python3 make g++
 # Copy package files (including package-lock.json)
 COPY package*.json ./
 COPY prisma ./prisma/
-COPY prisma.config.ts ./
+COPY prisma.config.js ./
 
 # Install ALL dependencies (ignoring scripts to avoid prisma error)
 RUN npm ci --ignore-scripts
@@ -40,7 +40,7 @@ WORKDIR /app
 # Copy essential files for production install
 COPY package*.json ./
 COPY prisma ./prisma/
-COPY prisma.config.ts ./
+COPY prisma.config.js ./
 
 # Install production dependencies ONLY
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
