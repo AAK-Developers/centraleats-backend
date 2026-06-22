@@ -47,16 +47,19 @@ jobs:
 
   trigger-frontend-deploy:
     needs: deploy
-    if: secrets.FRONTEND_DEPLOY_TOKEN != '' && secrets.FRONTEND_REPO != ''
     runs-on: ubuntu-latest
     steps:
     - name: Trigger Frontend Deployment Workflow
       run: |
-        echo "Backend deployed successfully. Triggering frontend workflow..."
-        curl -L \
-          -X POST \
-          -H "Accept: application/vnd.github+json" \
-          -H "Authorization: Bearer ${{ secrets.FRONTEND_DEPLOY_TOKEN }}" \
-          -H "X-GitHub-Api-Version: 2022-11-28" \
-          https://api.github.com/repos/${{ secrets.FRONTEND_REPO }}/dispatches \
-          -d '{"event_type": "backend-deployed", "client_payload": { "status": "success", "tag": "latest" }}'
+        if [ -n "${{ secrets.FRONTEND_DEPLOY_TOKEN }}" ] && [ -n "${{ secrets.FRONTEND_REPO }}" ]; then
+          echo "Backend deployed successfully. Triggering frontend workflow..."
+          curl -L \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.FRONTEND_DEPLOY_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/${{ secrets.FRONTEND_REPO }}/dispatches \
+            -d '{"event_type": "backend-deployed", "client_payload": { "status": "success", "tag": "latest" }}'
+        else
+          echo "Frontend deploy secrets not configured. Skipping trigger."
+        fi
