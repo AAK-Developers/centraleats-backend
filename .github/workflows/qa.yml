@@ -1,4 +1,4 @@
-name: CD - QA
+name: CD - QA Environment
 
 on:
   push:
@@ -6,13 +6,52 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
-  ci:
-    uses: ./.github/workflows/ci.yml
+  gate-check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Verify Dev Pipeline Success
+      run: |
+        echo "Checking if commit ${{ github.sha }} successfully passed Dev pipeline..."
+        URL="https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=${{ github.sha }}&status=success"
+        RUNS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "$URL")
+        
+        # Filtrar si la corrida de desarrollo fue exitosa
+        DEV_PASSED=$(echo "$RUNS" | jq '.workflow_runs[] | select(.name == "CI/CD - Dev Environment")')
+        
+        if [ -z "$DEV_PASSED" ]; then
+          echo "❌ ERROR: Este commit no ha pasado el workflow 'CI/CD - Dev Environment' con éxito."
+          echo "Por favor, despliega y valida en 'dev' antes de fusionar a QA."
+          exit 1
+        else
+          echo "✅ Validación de Desarrollo completada con éxito."
+        fi
+
+  check-image:
+    needs: gate-check
+    runs-on: ubuntu-latest
+    outputs:
+      exists: ${{ steps.check.outputs.exists }}
+    steps:
+    - name: Check if Docker image already exists on Docker Hub
+      id: check
+      run: |
+        IMAGE_TAG="sha-${{ github.sha }}"
+        echo "Checking for tag: $IMAGE_TAG"
+        URL="https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend/tags/$IMAGE_TAG/"
+        if curl -s -f -o /dev/null "$URL"; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "✅ La imagen ya existe en Docker Hub. Saltaremos la compilación."
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "ℹ️ La imagen no existe. Se requiere compilación."
+        fi
 
   build:
-    needs: ci
+    needs: check-image
+    if: needs.check-image.outputs.exists != 'true'
     uses: ./.github/workflows/build-push.yml
     with:
       image_tag: qa
@@ -21,11 +60,12 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   deploy:
-    needs: build
+    needs: [ check-image, build ]
+    if: always() && needs.check-image.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped')
     uses: ./.github/workflows/deploy.yml
     with:
       environment: qa
-      image_tag: qa
+      image_tag: sha-${{ github.sha }}
       container_name: centraleats-qa
       host_port: "3001"
     secrets:
