@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import { CreateProductUseCase } from "../../../application/use-cases/CreateProductUseCase";
 import { AppError } from "../../../../../shared/errors/AppError";
+import { validateRequestBody } from "../../../../../shared/validation/validateSchema";
+import { createProductSchema } from "../schemas/catalog.schemas";
 
 export class CreateProductController {
   constructor(private readonly createProductUseCase: CreateProductUseCase) {}
@@ -9,7 +11,7 @@ export class CreateProductController {
     try {
       // vendorId is NO LONGER read from req.body (BOLA/IDOR vulnerability fix).
       // The UseCase resolves the vendor internally from the authenticated clerkId.
-      const { categoryId, name, description, price, stock } = req.body;
+      const validatedData = validateRequestBody(createProductSchema, req);
       const clerkId = req.auth?.userId;
       const imageFile = req.file;
 
@@ -17,17 +19,13 @@ export class CreateProductController {
         throw new AppError("Authentication required to add products", 401);
       }
 
-      if (!categoryId || !name || !price || stock === undefined || stock === null || stock === "") {
-        throw new AppError("Missing required fields: categoryId, name, price, stock", 400);
-      }
-
       const product = await this.createProductUseCase.execute({
         clerkId,
-        categoryId,
-        name,
-        description,
-        price: Number(price),
-        stock: Number(stock),
+        categoryId: validatedData.categoryId,
+        name: validatedData.name,
+        description: validatedData.description,
+        price: validatedData.price,
+        stock: validatedData.stock,
         image: imageFile
           ? {
               buffer: imageFile.buffer,
