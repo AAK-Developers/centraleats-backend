@@ -1,43 +1,21 @@
 import { prisma } from "../../../../infrastructure/database/prismaClient";
 import { Order } from "../../domain/entities/Order";
 import { CreateOrderInput, IOrderRepository } from "../../domain/repositories/IOrderRepository";
-import { OrderStatus } from "../../domain/rules/OrderStatus";
 import { OrderStatus as PrismaOrderStatus } from "@prisma/client";
 
 export class PrismaOrderRepository implements IOrderRepository {
   private toDomain(prismaOrder: any): Order {
-    let domainStatus: OrderStatus;
-    switch (prismaOrder.status) {
-      case PrismaOrderStatus.PENDING_PAYMENT:
-        domainStatus = OrderStatus.CREATED; // Map to base OrderStatus
-        break;
-      case PrismaOrderStatus.PAID:
-        domainStatus = OrderStatus.CREATED;
-        break;
-      case PrismaOrderStatus.PREPARING:
-        domainStatus = OrderStatus.PREPARING;
-        break;
-      case PrismaOrderStatus.READY:
-        domainStatus = OrderStatus.READY;
-        break;
-      case PrismaOrderStatus.COMPLETED:
-        domainStatus = OrderStatus.COMPLETED;
-        break;
-      case PrismaOrderStatus.CANCELLED:
-        domainStatus = OrderStatus.CANCELLED;
-        break;
-      default:
-        domainStatus = OrderStatus.CREATED;
-    }
-
-    return {
-      id: prismaOrder.id,
-      userId: prismaOrder.userId,
-      vendorId: prismaOrder.vendorId,
-      totalAmount: Number(prismaOrder.totalAmount.toString()),
-      status: domainStatus,
-      createdAt: prismaOrder.createdAt,
-    };
+    return Order.reconstitute(
+      prismaOrder.id,
+      prismaOrder.userId,
+      prismaOrder.vendorId,
+      prismaOrder.totalAmount, // Already Int
+      prismaOrder.status,
+      prismaOrder.pickupCode,
+      prismaOrder.notes,
+      prismaOrder.createdAt,
+      prismaOrder.updatedAt || prismaOrder.createdAt
+    );
   }
 
   async create(input: CreateOrderInput): Promise<Order> {
@@ -45,8 +23,15 @@ export class PrismaOrderRepository implements IOrderRepository {
       data: {
         userId: input.userId,
         vendorId: input.vendorId,
-        totalAmount: input.totalAmount,
+        totalAmount: input.totalAmount, // Centavos
         status: PrismaOrderStatus.PENDING_PAYMENT,
+        items: {
+          create: input.items.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice, // Centavos historicos
+          })),
+        },
       },
     });
     return this.toDomain(prismaOrder);
@@ -77,16 +62,17 @@ export class PrismaOrderRepository implements IOrderRepository {
     });
 
     return prismaOrders.map(order => {
-      // Map database order status to Domain OrderStatus using toDomain logic
       const domainOrder = this.toDomain(order);
+      const primitiveOrder = domainOrder.toPrimitives();
+      
       return {
-        ...domainOrder,
+        ...primitiveOrder,
         vendor: order.vendor,
         items: order.items.map(item => ({
           id: item.id,
           productId: item.productId,
           quantity: item.quantity,
-          unitPrice: Number(item.unitPrice.toString()),
+          unitPrice: item.unitPrice, // Int centavos
           productName: item.product.name,
         })),
       };

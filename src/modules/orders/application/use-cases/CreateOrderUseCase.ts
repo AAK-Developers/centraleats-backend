@@ -13,13 +13,22 @@ export const createOrderSchema = z.object({
   })).min(1)
 });
 
+export interface CreateOrderDTO {
+  userId: string;
+  vendorId: string;
+  totalAmount: number;
+  items: { productId: string; quantity: number }[];
+}
+
 export class CreateOrderUseCase {
   constructor(
     private readonly orderRepository: IOrderRepository,
     private readonly productRepository: IProductRepository
   ) {}
 
-  async execute(input: CreateOrderInput) {
+  async execute(input: CreateOrderDTO) {
+    const itemsWithPrice = [];
+    
     for (const item of input.items) {
       const product = await this.productRepository.findById(item.productId);
       if (!product || !product.isActive) {
@@ -28,7 +37,17 @@ export class CreateOrderUseCase {
       if (product.stock < item.quantity) {
         throw new StockError(item.productId);
       }
+      
+      itemsWithPrice.push({
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: product.price.value // Get historical price from Product VO
+      });
     }
-    return this.orderRepository.create(input);
+    
+    return this.orderRepository.create({
+      ...input,
+      items: itemsWithPrice
+    });
   }
 }

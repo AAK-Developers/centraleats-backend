@@ -4,7 +4,7 @@ export interface CreateOrderInput {
   userId: string;
   vendorId: string;
   totalAmount: number;
-  items: { productId: string; quantity: number }[];
+  items: { productId: string; quantity: number; unitPrice: number }[];
 }
 
 export interface IOrderRepository {
