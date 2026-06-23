@@ -1,4 +1,5 @@
 import { createClerkClient } from "@clerk/backend";
+import crypto from "crypto";
 import { IVendorRepository } from "../../domain/repositories/IVendorRepository";
 import { PrismaUserRepository } from "../../../users/infrastructure/persistence/PrismaUserRepository";
 import { Vendor } from "../../domain/entities/Vendor";
@@ -62,7 +63,8 @@ export class RegisterVendorUseCase {
       );
     }
 
-    const vendor = await this.vendorRepository.create({
+    const vendorEntity = Vendor.create({
+      id: crypto.randomUUID(),
       name: dto.name,
       description: dto.description || null,
       location: dto.location || "",
@@ -70,9 +72,10 @@ export class RegisterVendorUseCase {
       openingTime: dto.openingTime || "",
       closingTime: dto.closingTime || "",
       logoUrl,
-      isActive: true,
       ownerId: user.id,
     });
+
+    const vendor = await this.vendorRepository.create(vendorEntity);
 
     return vendor;
   }

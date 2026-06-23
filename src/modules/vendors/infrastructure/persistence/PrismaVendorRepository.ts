@@ -4,7 +4,7 @@ import { IVendorRepository } from "../../domain/repositories/IVendorRepository";
 
 export class PrismaVendorRepository implements IVendorRepository {
   private toDomain(prismaVendor: any): Vendor {
-    return new Vendor(
+    return Vendor.reconstitute(
       prismaVendor.id,
       prismaVendor.name,
       prismaVendor.description,
@@ -43,9 +43,10 @@ export class PrismaVendorRepository implements IVendorRepository {
     return prismaVendors.map((v: any) => this.toDomain(v));
   }
 
-  async create(vendor: Omit<Vendor, "id" | "createdAt" | "updatedAt">): Promise<Vendor> {
+  async create(vendor: Vendor): Promise<Vendor> {
     const prismaVendor = await prisma.vendor.create({
       data: {
+        id: vendor.id,
         name: vendor.name,
         description: vendor.description,
         location: vendor.location,        // Required string (NOT NULL in schema v3.0)
