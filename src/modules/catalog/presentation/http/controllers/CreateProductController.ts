@@ -7,7 +7,7 @@ export class CreateProductController {
 
   async handle(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { vendorId, categoryId, name, description, price, stock } = req.body;
+      const { categoryId, name, description, price, stock } = req.body;
       const clerkId = req.auth?.userId;
       const imageFile = req.file;
 
