@@ -7,6 +7,8 @@ export class CreateProductController {
 
   async handle(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      // vendorId is NO LONGER read from req.body (BOLA/IDOR vulnerability fix).
+      // The UseCase resolves the vendor internally from the authenticated clerkId.
       const { categoryId, name, description, price, stock } = req.body;
       const clerkId = req.auth?.userId;
       const imageFile = req.file;
@@ -15,23 +17,24 @@ export class CreateProductController {
         throw new AppError("Authentication required to add products", 401);
       }
 
-      if (!vendorId || !categoryId || !name || !price) {
-        throw new AppError("Missing required fields: vendorId, categoryId, name, price", 400);
+      if (!categoryId || !name || !price || stock === undefined || stock === null || stock === "") {
+        throw new AppError("Missing required fields: categoryId, name, price, stock", 400);
       }
 
       const product = await this.createProductUseCase.execute({
         clerkId,
-        vendorId,
         categoryId,
         name,
         description,
         price: Number(price),
-        stock: stock ? Number(stock) : undefined,
-        image: imageFile ? {
-          buffer: imageFile.buffer,
-          originalname: imageFile.originalname,
-          mimetype: imageFile.mimetype
-        } : undefined
+        stock: Number(stock),
+        image: imageFile
+          ? {
+              buffer: imageFile.buffer,
+              originalname: imageFile.originalname,
+              mimetype: imageFile.mimetype,
+            }
+          : undefined,
       });
 
       res.status(201).json({
@@ -41,7 +44,7 @@ export class CreateProductController {
           id: product.id,
           name: product.name,
           description: product.description,
-          price: product.price,
+          price: product.price,     // Int (centavos). Frontend formats to "$3.50".
           stock: product.stock,
           imageUrl: product.imageUrl,
           isAvailable: product.isAvailable,
