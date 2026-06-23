@@ -44,7 +44,7 @@ export class CreateProductController {
           id: product.id,
           name: product.name,
           description: product.description,
-          price: product.price,     // Int (centavos). Frontend formats to "$3.50".
+          price: product.price.value,     // Int (centavos). Frontend formats to "$3.50".
           stock: product.stock,
           imageUrl: product.imageUrl,
           isAvailable: product.isAvailable,

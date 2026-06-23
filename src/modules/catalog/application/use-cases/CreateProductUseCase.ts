@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { IProductRepository } from "../../domain/repositories/IProductRepository";
 import { IVendorRepository } from "../../../vendors/domain/repositories/IVendorRepository";
 import { PrismaUserRepository } from "../../../users/infrastructure/persistence/PrismaUserRepository";
@@ -63,17 +64,18 @@ export class CreateProductUseCase {
     }
 
     // Step 4: Persist the product with the server-resolved vendorId
-    const product = await this.productRepository.create({
+    const productEntity = Product.create({
+      id: crypto.randomUUID(),
       name: dto.name,
       description: dto.description || null,
-      price: dto.price,
+      priceCents: dto.price,
       stock: dto.stock,
       imageUrl,
-      isAvailable: dto.stock > 0, // Business rule: no stock = not available
-      isActive: true,
       vendorId: vendor.id,        // Assigned by server, never from client
       categoryId: dto.categoryId,
     });
+
+    const product = await this.productRepository.create(productEntity);
 
     return product;
   }
