@@ -4,11 +4,11 @@ import { IProductRepository } from "../../domain/repositories/IProductRepository
 
 export class PrismaProductRepository implements IProductRepository {
   private toDomain(prismaProduct: any): Product {
-    return new Product(
+    return Product.reconstitute(
       prismaProduct.id,
       prismaProduct.name,
       prismaProduct.description,
-      Number(prismaProduct.price.toString()),
+      prismaProduct.price, // already Int in Prisma v3.0
       prismaProduct.stock,
       prismaProduct.imageUrl,
       prismaProduct.isAvailable,
@@ -41,18 +41,21 @@ export class PrismaProductRepository implements IProductRepository {
     return prismaProducts.map((p: any) => this.toDomain(p));
   }
 
-  async create(product: Omit<Product, "id" | "createdAt" | "updatedAt">): Promise<Product> {
+  async create(product: Product): Promise<Product> {
+    const data = product.toPrimitives();
+    
     const prismaProduct = await prisma.product.create({
       data: {
-        name: product.name,
-        description: product.description,
-        price: product.price,
-        stock: product.stock,
-        imageUrl: product.imageUrl,
-        isAvailable: product.isAvailable,
-        isActive: product.isActive,
-        vendorId: product.vendorId,
-        categoryId: product.categoryId,
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        stock: data.stock,
+        imageUrl: data.imageUrl,
+        isAvailable: data.isAvailable,
+        isActive: data.isActive,
+        vendorId: data.vendorId,
+        categoryId: data.categoryId,
       },
     });
     return this.toDomain(prismaProduct);
@@ -64,7 +67,7 @@ export class PrismaProductRepository implements IProductRepository {
       data: {
         name: data.name,
         description: data.description,
-        price: data.price,
+        price: data.price?.value,
         stock: data.stock,
         imageUrl: data.imageUrl,
         isAvailable: data.isAvailable,

@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { IProductRepository } from "../../domain/repositories/IProductRepository";
 import { IVendorRepository } from "../../../vendors/domain/repositories/IVendorRepository";
 import { PrismaUserRepository } from "../../../users/infrastructure/persistence/PrismaUserRepository";
@@ -5,14 +6,15 @@ import { IStorageRepository } from "../../../../shared/domain/ports/storage.repo
 import { Product } from "../../domain/entities/Product";
 import { AppError } from "../../../../shared/errors/AppError";
 
+// vendorId is intentionally ABSENT from this DTO.
+// The server resolves the vendor from the authenticated clerkId to prevent BOLA/IDOR.
 interface CreateProductDTO {
   clerkId: string;
-  vendorId: string;
   categoryId: string;
   name: string;
   description?: string;
-  price: number;
-  stock?: number;
+  price: number;   // Centavos (Int). e.g. 350 = $3.50
+  stock: number;   // Required. No implicit defaults. Auditable inventory.
   image?: {
     buffer: Buffer;
     originalname: string;
@@ -30,41 +32,50 @@ export class CreateProductUseCase {
   ) {}
 
   async execute(dto: CreateProductDTO): Promise<Product> {
+    // Step 1: Resolve the authenticated user from Clerk token
     const user = await this.userRepository.findByClerkId(dto.clerkId);
     if (!user) {
-      throw new AppError("User not found.", 404);
+      throw new AppError("User not found. Please complete onboarding first.", 404);
     }
 
-    const vendor = await this.vendorRepository.findById(dto.vendorId);
+    // Step 2: Resolve the vendor from the server using the user's internal ID.
+    // This is the BOLA/IDOR fix: vendorId NEVER comes from the client body.
+    const vendor = await this.vendorRepository.findByOwnerId(user.id);
     if (!vendor) {
-      throw new AppError("Vendor not found.", 404);
+      throw new AppError(
+        "No vendor profile found for this account. Register a vendor first.",
+        403
+      );
     }
 
-    if (vendor.ownerId !== user.id) {
-      throw new AppError("You do not have permission to add products to this vendor.", 403);
+    if (!vendor.isActive) {
+      throw new AppError("Your vendor account is currently inactive.", 403);
     }
 
+    // Step 3: Upload image if provided
     let imageUrl: string | null = null;
     if (dto.image) {
       imageUrl = await this.storageRepository.uploadImage(
         dto.image.buffer,
         dto.image.originalname,
         dto.image.mimetype,
-        'product-images'
+        "product-images"
       );
     }
 
-    const product = await this.productRepository.create({
+    // Step 4: Persist the product with the server-resolved vendorId
+    const productEntity = Product.create({
+      id: crypto.randomUUID(),
       name: dto.name,
       description: dto.description || null,
-      price: dto.price,
-      stock: dto.stock || 0,
+      priceCents: dto.price,
+      stock: dto.stock,
       imageUrl,
-      isAvailable: true,
-      isActive: true,
-      vendorId: dto.vendorId,
+      vendorId: vendor.id,        // Assigned by server, never from client
       categoryId: dto.categoryId,
     });
+
+    const product = await this.productRepository.create(productEntity);
 
     return product;
   }

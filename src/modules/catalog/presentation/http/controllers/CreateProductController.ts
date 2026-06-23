@@ -1,13 +1,17 @@
 import { Request, Response, NextFunction } from "express";
 import { CreateProductUseCase } from "../../../application/use-cases/CreateProductUseCase";
 import { AppError } from "../../../../../shared/errors/AppError";
+import { validateRequestBody } from "../../../../../shared/validation/validateSchema";
+import { createProductSchema } from "../schemas/catalog.schemas";
 
 export class CreateProductController {
   constructor(private readonly createProductUseCase: CreateProductUseCase) {}
 
   async handle(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { vendorId, categoryId, name, description, price, stock } = req.body;
+      // vendorId is NO LONGER read from req.body (BOLA/IDOR vulnerability fix).
+      // The UseCase resolves the vendor internally from the authenticated clerkId.
+      const validatedData = validateRequestBody(createProductSchema, req);
       const clerkId = req.auth?.userId;
       const imageFile = req.file;
 
@@ -15,23 +19,20 @@ export class CreateProductController {
         throw new AppError("Authentication required to add products", 401);
       }
 
-      if (!vendorId || !categoryId || !name || !price) {
-        throw new AppError("Missing required fields: vendorId, categoryId, name, price", 400);
-      }
-
       const product = await this.createProductUseCase.execute({
         clerkId,
-        vendorId,
-        categoryId,
-        name,
-        description,
-        price: Number(price),
-        stock: stock ? Number(stock) : undefined,
-        image: imageFile ? {
-          buffer: imageFile.buffer,
-          originalname: imageFile.originalname,
-          mimetype: imageFile.mimetype
-        } : undefined
+        categoryId: validatedData.categoryId,
+        name: validatedData.name,
+        description: validatedData.description,
+        price: validatedData.price,
+        stock: validatedData.stock,
+        image: imageFile
+          ? {
+              buffer: imageFile.buffer,
+              originalname: imageFile.originalname,
+              mimetype: imageFile.mimetype,
+            }
+          : undefined,
       });
 
       res.status(201).json({
@@ -41,7 +42,7 @@ export class CreateProductController {
           id: product.id,
           name: product.name,
           description: product.description,
-          price: product.price,
+          price: product.price.value,     // Int (centavos). Frontend formats to "$3.50".
           stock: product.stock,
           imageUrl: product.imageUrl,
           isAvailable: product.isAvailable,
