@@ -190,3 +190,5 @@ The application will start inside the container and bind to the specified port.
 - [x] RBAC (Role Based Access Control) implementation (SCRUM-23)
 - [ ] Role Onboarding / Selection
 - [ ] Order Processing & Websockets
+
+
