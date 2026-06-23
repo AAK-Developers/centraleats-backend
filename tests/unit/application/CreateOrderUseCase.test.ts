@@ -5,6 +5,19 @@ import { StockError } from "../../../src/modules/orders/domain/rules/StockError"
 import { OrderStatus } from "@prisma/client";
 import { Money } from "../../../src/shared/domain/value-objects/Money";
 
+// We need to mock PrismaUserRepository since the UseCase now resolves userId server-side
+jest.mock("../../../src/modules/users/infrastructure/persistence/PrismaUserRepository", () => ({
+  PrismaUserRepository: jest.fn().mockImplementation(() => ({
+    findByClerkId: jest.fn().mockResolvedValue({
+      id: "user-1",
+      clerkId: "clerk_user_1",
+      email: "test@uce.edu.ec",
+      role: "STUDENT",
+      isActive: true,
+    }),
+  })),
+}));
+
 describe("CreateOrderUseCase", () => {
   let useCase: CreateOrderUseCase;
   let mockOrderRepo: ReturnType<typeof createMockOrderRepository>;
@@ -16,14 +29,13 @@ describe("CreateOrderUseCase", () => {
     useCase = new CreateOrderUseCase(mockOrderRepo, mockProductRepo);
   });
 
-  const validOrderInput = {
-    userId: "user-1",
+  const validOrderDTO = {
+    clerkId: "clerk_user_1",
     vendorId: "vendor-1",
-    totalAmount: 100, // 100 cents = $1.00
     items: [{ productId: "prod-1", quantity: 2 }]
   };
 
-  it("should create an order successfully when stock is sufficient", async () => {
+  it("should create an order with server-computed totalAmount", async () => {
     // Arrange
     const priceMoney = Money.fromCents(50);
     mockProductRepo.findById.mockResolvedValue({
@@ -42,7 +54,9 @@ describe("CreateOrderUseCase", () => {
 
     const createdOrder = {
       id: "order-1",
-      ...validOrderInput,
+      userId: "user-1",
+      vendorId: "vendor-1",
+      totalAmount: 100, // 2 × 50 cents, computed server-side
       items: [{ productId: "prod-1", quantity: 2, unitPrice: 50 }],
       status: OrderStatus.PENDING_PAYMENT,
       pickupCode: "XYZ123",
@@ -54,17 +68,18 @@ describe("CreateOrderUseCase", () => {
     mockOrderRepo.create.mockResolvedValue(createdOrder);
 
     // Act
-    const result = await useCase.execute(validOrderInput);
+    const result = await useCase.execute(validOrderDTO);
 
     // Assert
     expect(mockProductRepo.findById).toHaveBeenCalledWith("prod-1");
-    
-    // The use case should enrich items with unitPrice
-    const expectedCreateCall = {
-      ...validOrderInput,
+
+    // totalAmount is computed server-side: 2 × 50 = 100 cents
+    expect(mockOrderRepo.create).toHaveBeenCalledWith({
+      userId: "user-1",
+      vendorId: "vendor-1",
+      totalAmount: 100,
       items: [{ productId: "prod-1", quantity: 2, unitPrice: 50 }]
-    };
-    expect(mockOrderRepo.create).toHaveBeenCalledWith(expectedCreateCall);
+    });
     expect(result).toEqual(createdOrder);
   });
 
@@ -73,7 +88,7 @@ describe("CreateOrderUseCase", () => {
     mockProductRepo.findById.mockResolvedValue(null);
 
     // Act & Assert
-    await expect(useCase.execute(validOrderInput)).rejects.toThrow("Product prod-1 not found or inactive");
+    await expect(useCase.execute(validOrderDTO)).rejects.toThrow("Product prod-1 not found or inactive");
     expect(mockOrderRepo.create).not.toHaveBeenCalled();
   });
 
@@ -95,8 +110,8 @@ describe("CreateOrderUseCase", () => {
     } as any);
 
     // Act & Assert
-    await expect(useCase.execute(validOrderInput)).rejects.toThrow(StockError);
-    await expect(useCase.execute(validOrderInput)).rejects.toThrow("Product prod-1 does not have enough stock.");
+    await expect(useCase.execute(validOrderDTO)).rejects.toThrow(StockError);
+    await expect(useCase.execute(validOrderDTO)).rejects.toThrow("Product prod-1 does not have enough stock.");
     expect(mockOrderRepo.create).not.toHaveBeenCalled();
   });
 });
