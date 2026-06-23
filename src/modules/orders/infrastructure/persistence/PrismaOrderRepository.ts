@@ -9,12 +9,12 @@ export class PrismaOrderRepository implements IOrderRepository {
       prismaOrder.id,
       prismaOrder.userId,
       prismaOrder.vendorId,
-      prismaOrder.totalAmount, // Already Int
+      prismaOrder.totalAmount,  // Already Int (centavos)
       prismaOrder.status,
-      prismaOrder.pickupCode,
-      prismaOrder.notes,
+      prismaOrder.pickupCode ?? null,
+      prismaOrder.notes ?? null,
       prismaOrder.createdAt,
-      prismaOrder.updatedAt || prismaOrder.createdAt
+      prismaOrder.updatedAt
     );
   }
 
@@ -23,13 +23,13 @@ export class PrismaOrderRepository implements IOrderRepository {
       data: {
         userId: input.userId,
         vendorId: input.vendorId,
-        totalAmount: input.totalAmount, // Centavos
+        totalAmount: input.totalAmount,          // Centavos — computed server-side
         status: PrismaOrderStatus.PENDING_PAYMENT,
         items: {
           create: input.items.map(item => ({
             productId: item.productId,
             quantity: item.quantity,
-            unitPrice: item.unitPrice, // Centavos historicos
+            unitPrice: item.unitPrice,           // Price snapshot at order time (centavos)
           })),
         },
       },
@@ -42,37 +42,31 @@ export class PrismaOrderRepository implements IOrderRepository {
       where: { userId },
       include: {
         vendor: {
-          select: {
-            name: true,
-          },
+          select: { name: true },
         },
         items: {
           include: {
             product: {
-              select: {
-                name: true,
-              },
+              select: { name: true },
             },
           },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
     });
 
     return prismaOrders.map(order => {
       const domainOrder = this.toDomain(order);
-      const primitiveOrder = domainOrder.toPrimitives();
-      
+      const primitives = domainOrder.toPrimitives();
+
       return {
-        ...primitiveOrder,
+        ...primitives,
         vendor: order.vendor,
         items: order.items.map(item => ({
           id: item.id,
           productId: item.productId,
           quantity: item.quantity,
-          unitPrice: item.unitPrice, // Int centavos
+          unitPrice: item.unitPrice,             // Int centavos (historical price)
           productName: item.product.name,
         })),
       };
