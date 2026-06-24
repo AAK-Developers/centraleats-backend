@@ -25,6 +25,15 @@ export const requireRole = (allowedRoles: AllowedRole[]) => {
         return;
       }
 
+      // Caso 3: Usuario tiene rol pendiente
+      if (user.role === "PENDING") {
+        res.status(403).json({ 
+          error: "Forbidden: Role not assigned. Please complete onboarding.",
+          code: "ROLE_PENDING"
+        });
+        return;
+      }
+
       // Caso 3: Usuario inactivo
       if (!user.isActive) {
         res.status(403).json({ error: "Forbidden: Account is deactivated" });

@@ -21,6 +21,10 @@ export class RegisterUserUseCase {
     const existingUser = await this.userRepository.findByClerkId(dto.clerkId);
 
     if (existingUser) {
+      if (existingUser.role !== "PENDING" && existingUser.role !== dto.role) {
+        throw new AppError("Role cannot be changed once assigned. Contact support.", 409);
+      }
+
       // If user exists, update their role (and other optional fields if provided)
       const updatedUser = await this.userRepository.update(existingUser.id, {
         role: dto.role,

@@ -11,7 +11,7 @@ export class PrismaUserRepository implements IUserRepository {
       prismaUser.email,
       prismaUser.fullName,
       prismaUser.avatarUrl,
-      prismaUser.role as "STUDENT" | "VENDOR" | "ADMIN",
+      prismaUser.role as "PENDING" | "STUDENT" | "VENDOR" | "ADMIN",
       prismaUser.isActive,
       prismaUser.createdAt,
       prismaUser.updatedAt
@@ -67,7 +67,7 @@ export class PrismaUserRepository implements IUserRepository {
         email: data.email || "",
         fullName: data.fullName,
         avatarUrl: data.avatarUrl,
-        role: data.role ? (data.role as UserRole) : "STUDENT",
+        role: data.role ? (data.role as UserRole) : "PENDING",
       },
       update: {
         email: data.email,
