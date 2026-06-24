@@ -16,12 +16,13 @@ export class SupabaseStorageAdapter implements IStorageRepository {
     this.supabase = createClient(supabaseUrl, supabaseKey);
   }
 
-  async uploadImage(fileBuffer: Buffer, fileName: string, mimeType: string, bucket: string): Promise<string> {
+  async uploadImage(fileBuffer: Buffer, fileName: string, mimeType: string, bucket: string, folderPath?: string): Promise<string> {
     const uniqueFileName = `${Date.now()}-${fileName}`;
+    const filePath = folderPath ? `${folderPath}/${uniqueFileName}` : uniqueFileName;
     
     const { data, error } = await this.supabase.storage
       .from(bucket)
-      .upload(uniqueFileName, fileBuffer, {
+      .upload(filePath, fileBuffer, {
         contentType: mimeType,
         upsert: false,
       });
@@ -32,7 +33,7 @@ export class SupabaseStorageAdapter implements IStorageRepository {
 
     const { data: publicUrlData } = this.supabase.storage
       .from(bucket)
-      .getPublicUrl(uniqueFileName);
+      .getPublicUrl(filePath);
 
     return publicUrlData.publicUrl;
   }
