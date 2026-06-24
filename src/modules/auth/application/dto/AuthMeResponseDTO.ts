@@ -5,7 +5,7 @@ export class AuthMeResponseDTO {
   public readonly email: string;
   public readonly fullName: string | null;
   public readonly avatarUrl: string | null;
-  public readonly role: "STUDENT" | "VENDOR" | "ADMIN";
+  public readonly role: "PENDING" | "STUDENT" | "VENDOR" | "ADMIN";
   public readonly isActive: boolean;
   public readonly clerkId: string;
 
