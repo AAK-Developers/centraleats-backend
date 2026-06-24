@@ -31,7 +31,7 @@ export class RegisterVendorUseCase {
   constructor(
     private readonly vendorRepository: IVendorRepository,
     private readonly storageRepository: IStorageRepository
-  ) {}
+  ) { }
 
   async execute(dto: RegisterVendorDTO): Promise<Vendor> {
     const user = await this.userRepository.findByClerkId(dto.clerkId);
@@ -61,7 +61,7 @@ export class RegisterVendorUseCase {
         dto.image.buffer,
         dto.image.originalname,
         dto.image.mimetype,
-        'centraleats-media', // Unified bucket for all media
+        'vendor-logos', // Unified bucket for all media
         `vendors/${vendorId}/logo` // Folder path guarantees ownership separation
       );
     }
