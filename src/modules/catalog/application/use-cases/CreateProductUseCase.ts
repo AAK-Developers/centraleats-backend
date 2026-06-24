@@ -29,7 +29,7 @@ export class CreateProductUseCase {
     private readonly productRepository: IProductRepository,
     private readonly vendorRepository: IVendorRepository,
     private readonly storageRepository: IStorageRepository
-  ) {}
+  ) { }
 
   async execute(dto: CreateProductDTO): Promise<Product> {
     // Step 1: Resolve the authenticated user from Clerk token
@@ -59,7 +59,8 @@ export class CreateProductUseCase {
         dto.image.buffer,
         dto.image.originalname,
         dto.image.mimetype,
-        "product-images"
+        "vendor-logos", // Unified bucket for all media
+        `vendors/${vendor.id}/products` // Folder path guarantees ownership
       );
     }
 
