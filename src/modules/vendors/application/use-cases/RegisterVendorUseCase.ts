@@ -53,18 +53,21 @@ export class RegisterVendorUseCase {
       }
     }
 
+    const vendorId = crypto.randomUUID(); // Generate early to use in storage path
+
     let logoUrl: string | null = null;
     if (dto.image) {
       logoUrl = await this.storageRepository.uploadImage(
         dto.image.buffer,
         dto.image.originalname,
         dto.image.mimetype,
-        'vendor-logos' // Specific bucket for vendors
+        'centraleats-media', // Unified bucket for all media
+        `vendors/${vendorId}/logo` // Folder path guarantees ownership separation
       );
     }
 
     const vendorEntity = Vendor.create({
-      id: crypto.randomUUID(),
+      id: vendorId,
       name: dto.name,
       description: dto.description || null,
       location: dto.location || "",

@@ -59,7 +59,8 @@ export class CreateProductUseCase {
         dto.image.buffer,
         dto.image.originalname,
         dto.image.mimetype,
-        "product-images"
+        "centraleats-media", // Unified bucket for all media
+        `vendors/${vendor.id}/products` // Folder path guarantees ownership
       );
     }
 
