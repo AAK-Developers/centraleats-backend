@@ -20,7 +20,12 @@ export class UpdateOrderStatusController {
         throw new AppError(`Invalid status: ${status}`, 400);
       }
 
-      const updatedOrder = await this.updateOrderStatusUseCase.execute(id, status as OrderStatus);
+      const clerkId = req.auth?.userId;
+      if (!clerkId) {
+        throw new AppError("Authentication required to update order status", 401);
+      }
+
+      const updatedOrder = await this.updateOrderStatusUseCase.execute(id, status as OrderStatus, clerkId);
 
       res.status(200).json({
         success: true,

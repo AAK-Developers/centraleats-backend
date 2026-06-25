@@ -25,7 +25,7 @@ export const createCatalogModuleRouter = (): Router => {
   const createProductController = new CreateProductController(createProductUseCase);
 
   router.get("/categories", (req, res) => getCategoriesController.handle(req, res));
-  router.get("/products", (req, res) => getProductsController.handle(req, res));
+  router.get("/products", requireAuth, (req, res) => getProductsController.handle(req, res));
   
   // Create Product route
   router.post("/products", requireAuth, requireRole(["VENDOR"]), upload.single('image'), (req, res, next) => createProductController.handle(req, res, next));
