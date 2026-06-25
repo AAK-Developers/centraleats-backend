@@ -45,7 +45,7 @@ router.get("/me", requireAuth, async (req: Request, res: Response, next: NextFun
           email,
           fullName,
           avatarUrl,
-          role: "STUDENT",
+          role: "PENDING",
           isActive: true,
         });
       } catch (err: any) {

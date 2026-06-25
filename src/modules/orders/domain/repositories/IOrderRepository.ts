@@ -1,3 +1,4 @@
+import { OrderStatus } from "@prisma/client";
 import { Order } from "../entities/Order";
 
 export interface CreateOrderInput {
@@ -10,4 +11,7 @@ export interface CreateOrderInput {
 export interface IOrderRepository {
   create(input: CreateOrderInput): Promise<Order>;
   findByUserId(userId: string): Promise<any[]>;
+  findByVendorId(vendorId: string): Promise<any[]>;
+  findById(id: string): Promise<Order | null>;
+  updateStatus(id: string, status: OrderStatus): Promise<Order>;
 }
