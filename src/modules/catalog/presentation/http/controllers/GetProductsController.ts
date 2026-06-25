@@ -6,7 +6,7 @@ import { Product } from "../../../domain/entities/Product";
  * Serializes a Product domain entity to a plain JSON-safe response object.
  * Critically: unpacks Money VO → price.value (Int centavos) per API contract.
  */
-function serializeProduct(product: Product) {
+function serializeProduct(product: Product & { vendorName: string }) {
   return {
     id: product.id,
     name: product.name,
@@ -18,6 +18,7 @@ function serializeProduct(product: Product) {
     isActive: product.isActive,
     vendorId: product.vendorId,
     categoryId: product.categoryId,
+    vendorName: product.vendorName,
   };
 }
 
@@ -27,13 +28,16 @@ export class GetProductsController {
   async handle(req: Request, res: Response): Promise<void> {
     try {
       const vendorId = req.query.vendorId as string | undefined;
-      let products: Product[];
+      const availableParam = req.query.available as string | undefined;
 
-      if (vendorId) {
-        products = await this.productRepository.listByVendorId(vendorId);
-      } else {
-        products = await this.productRepository.listActive();
-      }
+      let isAvailable: boolean | undefined = undefined;
+      if (availableParam === "true") isAvailable = true;
+      if (availableParam === "false") isAvailable = false;
+
+      const products = await this.productRepository.listWithFilters({
+        vendorId,
+        isAvailable,
+      });
 
       res.status(200).json({
         success: true,

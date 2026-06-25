@@ -19,12 +19,14 @@ export class PrismaOrderRepository implements IOrderRepository {
   }
 
   async create(input: CreateOrderInput): Promise<Order> {
+    const randomCode = Math.floor(1000 + Math.random() * 9000).toString();
     const prismaOrder = await prisma.order.create({
       data: {
         userId: input.userId,
         vendorId: input.vendorId,
         totalAmount: input.totalAmount,          // Centavos — computed server-side
         status: PrismaOrderStatus.PENDING_PAYMENT,
+        pickupCode: randomCode,
         items: {
           create: input.items.map(item => ({
             productId: item.productId,
@@ -37,9 +39,33 @@ export class PrismaOrderRepository implements IOrderRepository {
     return this.toDomain(prismaOrder);
   }
 
-  async findByUserId(userId: string): Promise<any[]> {
+  async findByUserId(userId: string, filters?: { status?: PrismaOrderStatus; active?: boolean }): Promise<any[]> {
+    const where: any = { userId };
+    
+    if (filters?.status && filters?.active === true) {
+      const activeStatuses: PrismaOrderStatus[] = [
+        PrismaOrderStatus.PENDING_PAYMENT,
+        PrismaOrderStatus.PAID,
+        PrismaOrderStatus.RECEIVED,
+        PrismaOrderStatus.PREPARING,
+        PrismaOrderStatus.READY,
+        PrismaOrderStatus.PICKED_UP
+      ];
+      if (activeStatuses.includes(filters.status)) {
+        where.status = filters.status;
+      } else {
+        where.status = "NONE";
+      }
+    } else if (filters?.status) {
+      where.status = filters.status;
+    } else if (filters?.active === true) {
+      where.status = {
+        notIn: [PrismaOrderStatus.COMPLETED, PrismaOrderStatus.CANCELLED]
+      };
+    }
+
     const prismaOrders = await prisma.order.findMany({
-      where: { userId },
+      where,
       include: {
         vendor: {
           select: { name: true },
@@ -61,6 +87,7 @@ export class PrismaOrderRepository implements IOrderRepository {
 
       return {
         ...primitives,
+        vendorName: order.vendor.name,
         vendor: order.vendor,
         items: order.items.map(item => ({
           id: item.id,
@@ -77,6 +104,9 @@ export class PrismaOrderRepository implements IOrderRepository {
     const prismaOrders = await prisma.order.findMany({
       where: { vendorId },
       include: {
+        vendor: {
+          select: { name: true },
+        },
         user: {
           select: { fullName: true, email: true },
         },
@@ -97,6 +127,7 @@ export class PrismaOrderRepository implements IOrderRepository {
 
       return {
         ...primitives,
+        vendorName: order.vendor?.name,
         user: order.user,
         items: order.items.map(item => ({
           id: item.id,

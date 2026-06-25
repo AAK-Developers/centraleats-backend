@@ -13,6 +13,8 @@ import { GetVendorOrdersUseCase } from "./application/use-cases/GetVendorOrdersU
 import { GetVendorOrdersController } from "./presentation/http/controllers/GetVendorOrdersController";
 import { UpdateOrderStatusUseCase } from "./application/use-cases/UpdateOrderStatusUseCase";
 import { UpdateOrderStatusController } from "./presentation/http/controllers/UpdateOrderStatusController";
+import { GetStudentOrdersUseCase } from "./application/use-cases/GetStudentOrdersUseCase";
+import { GetStudentOrdersController } from "./presentation/http/controllers/GetStudentOrdersController";
 
 export const createOrdersModuleRouter = (): Router => {
   const orderRepository = new PrismaOrderRepository();
@@ -27,7 +29,15 @@ export const createOrdersModuleRouter = (): Router => {
   const updateOrderStatusUseCase = new UpdateOrderStatusUseCase(orderRepository);
   const updateOrderStatusController = new UpdateOrderStatusController(updateOrderStatusUseCase);
 
-  return buildOrderRoutes(createOrderController, getVendorOrdersController, updateOrderStatusController);
+  const getStudentOrdersUseCase = new GetStudentOrdersUseCase(orderRepository);
+  const getStudentOrdersController = new GetStudentOrdersController(getStudentOrdersUseCase);
+
+  return buildOrderRoutes(
+    createOrderController,
+    getVendorOrdersController,
+    updateOrderStatusController,
+    getStudentOrdersController
+  );
 };
 
 export const createStudentModuleRouter = (): Router => {

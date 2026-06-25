@@ -41,6 +41,32 @@ export class PrismaProductRepository implements IProductRepository {
     return prismaProducts.map((p: any) => this.toDomain(p));
   }
 
+  async listWithFilters(filters: { vendorId?: string; isAvailable?: boolean }): Promise<(Product & { vendorName: string })[]> {
+    const where: any = { isActive: true };
+    if (filters.vendorId) {
+      where.vendorId = filters.vendorId;
+    }
+    if (filters.isAvailable !== undefined) {
+      where.isAvailable = filters.isAvailable;
+    }
+
+    const prismaProducts = await prisma.product.findMany({
+      where,
+      include: {
+        vendor: {
+          select: { name: true },
+        },
+      },
+    });
+
+    return prismaProducts.map((p: any) => {
+      const product = this.toDomain(p);
+      return Object.assign(product, {
+        vendorName: p.vendor.name,
+      }) as Product & { vendorName: string };
+    });
+  }
+
   async create(product: Product): Promise<Product> {
     const data = product.toPrimitives();
     
