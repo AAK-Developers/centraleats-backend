@@ -80,12 +80,12 @@ async function main() {
 
   // ─── 2. CATEGORIES ──────────────────────────────────────────────────────────
   // Categorías amplias y semánticas para soportar diversidad gastronómica del campus UCE.
-  // Evitar nombres rígidos de platos (ej: "Almuerzos") que rompan el lenguaje ubicuo
-  // cuando el menú es más diverso.
+  // Se especifican IDs fijos para coincidir con la lista rígida del frontend.
 
   const categoryPlatosFuertes = await prisma.category.create({
     data: {
-      name: "Platos Fuertes",
+      id: "06542c60-ad6b-4844-b1b1-3ad6d5baf35a",
+      name: "Almuerzos",
       description: "Almuerzos, menús ejecutivos y platos tradicionales del campus.",
       isActive: true,
     },
@@ -101,7 +101,8 @@ async function main() {
 
   const categorySnacks = await prisma.category.create({
     data: {
-      name: "Snacks y Acompañantes",
+      id: "153a9f76-160d-4895-814d-9831c33088cd",
+      name: "Snacks",
       description: "Papas fritas, bolones, chifles y otros acompañantes.",
       isActive: true,
     },
@@ -109,6 +110,7 @@ async function main() {
 
   const categoryBebidas = await prisma.category.create({
     data: {
+      id: "b5003928-6d64-417b-8798-2726d16c8cfb",
       name: "Bebidas",
       description: "Jugos naturales, aguas, colas y bebidas calientes.",
       isActive: true,

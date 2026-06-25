@@ -9,13 +9,25 @@ import { GetStudentOrderHistoryUseCase } from "./application/use-cases/GetStuden
 import { GetStudentOrderHistoryController } from "./presentation/http/controllers/GetStudentOrderHistoryController";
 import { requireAuth } from "../../shared/middlewares/requireAuth";
 
+import { GetVendorOrdersUseCase } from "./application/use-cases/GetVendorOrdersUseCase";
+import { GetVendorOrdersController } from "./presentation/http/controllers/GetVendorOrdersController";
+import { UpdateOrderStatusUseCase } from "./application/use-cases/UpdateOrderStatusUseCase";
+import { UpdateOrderStatusController } from "./presentation/http/controllers/UpdateOrderStatusController";
+
 export const createOrdersModuleRouter = (): Router => {
   const orderRepository = new PrismaOrderRepository();
   const productRepository = new PrismaProductRepository();
+  
   const createOrderUseCase = new CreateOrderUseCase(orderRepository, productRepository);
   const createOrderController = new CreateOrderController(createOrderUseCase);
 
-  return buildOrderRoutes(createOrderController);
+  const getVendorOrdersUseCase = new GetVendorOrdersUseCase(orderRepository);
+  const getVendorOrdersController = new GetVendorOrdersController(getVendorOrdersUseCase);
+
+  const updateOrderStatusUseCase = new UpdateOrderStatusUseCase(orderRepository);
+  const updateOrderStatusController = new UpdateOrderStatusController(updateOrderStatusUseCase);
+
+  return buildOrderRoutes(createOrderController, getVendorOrdersController, updateOrderStatusController);
 };
 
 export const createStudentModuleRouter = (): Router => {

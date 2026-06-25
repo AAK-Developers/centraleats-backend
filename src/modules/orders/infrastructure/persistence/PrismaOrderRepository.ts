@@ -72,4 +72,56 @@ export class PrismaOrderRepository implements IOrderRepository {
       };
     });
   }
+
+  async findByVendorId(vendorId: string): Promise<any[]> {
+    const prismaOrders = await prisma.order.findMany({
+      where: { vendorId },
+      include: {
+        user: {
+          select: { fullName: true, email: true },
+        },
+        items: {
+          include: {
+            product: {
+              select: { name: true, imageUrl: true },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return prismaOrders.map(order => {
+      const domainOrder = this.toDomain(order);
+      const primitives = domainOrder.toPrimitives();
+
+      return {
+        ...primitives,
+        user: order.user,
+        items: order.items.map(item => ({
+          id: item.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          productName: item.product.name,
+          productImageUrl: item.product.imageUrl,
+        })),
+      };
+    });
+  }
+
+  async findById(id: string): Promise<Order | null> {
+    const prismaOrder = await prisma.order.findUnique({
+      where: { id },
+    });
+    return prismaOrder ? this.toDomain(prismaOrder) : null;
+  }
+
+  async updateStatus(id: string, status: PrismaOrderStatus): Promise<Order> {
+    const prismaOrder = await prisma.order.update({
+      where: { id },
+      data: { status },
+    });
+    return this.toDomain(prismaOrder);
+  }
 }
