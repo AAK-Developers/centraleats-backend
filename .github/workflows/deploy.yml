@@ -70,13 +70,24 @@ jobs:
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
+          set -e
           echo "==== Iniciando despliegue de ${{ inputs.container_name }} (Tag: ${{ inputs.image_tag }}) ===="
           
           # Pull de la imagen más reciente
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:${{ inputs.image_tag }}
           
-          # Verificar si existe contenedor previo
-          if docker ps -a --format '{{.Names}}' | grep -Eq "^${{ inputs.container_name }}$"; then
+          # Mostrar información de la imagen descargada para diagnóstico
+          echo "=== DETALLES DE LA IMAGEN DE Docker ==="
+          docker inspect ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:${{ inputs.image_tag }} | grep -E "Created|Id" || true
+          echo "========================================"
+          
+          # Verificar si existe contenedor previo (Temporalmente desactivar exit-on-error para el grep)
+          set +e
+          docker ps -a --format '{{.Names}}' | grep -Eq "^${{ inputs.container_name }}$"
+          HAS_CONTAINER=$?
+          set -e
+          
+          if [ $HAS_CONTAINER -eq 0 ]; then
             echo "Respaldando contenedor actual..."
             docker rm -f ${{ inputs.container_name }}-old || true
             docker stop ${{ inputs.container_name }} || true
