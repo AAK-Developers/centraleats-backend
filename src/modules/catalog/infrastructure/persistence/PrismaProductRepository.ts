@@ -4,13 +4,17 @@ import { IProductRepository } from "../../domain/repositories/IProductRepository
 
 export class PrismaProductRepository implements IProductRepository {
   private toDomain(prismaProduct: any): Product {
+    let imageUrl = prismaProduct.imageUrl;
+    if (imageUrl && (imageUrl.includes("localhost:3000/uploads/") || imageUrl.includes("localhost:3001/uploads/"))) {
+      imageUrl = imageUrl.replace(/^https?:\/\/localhost:\d+\/uploads\//, "/uploads/");
+    }
     return Product.reconstitute(
       prismaProduct.id,
       prismaProduct.name,
       prismaProduct.description,
       prismaProduct.price, // already Int in Prisma v3.0
       prismaProduct.stock,
-      prismaProduct.imageUrl,
+      imageUrl,
       prismaProduct.isAvailable,
       prismaProduct.isActive,
       prismaProduct.vendorId,
