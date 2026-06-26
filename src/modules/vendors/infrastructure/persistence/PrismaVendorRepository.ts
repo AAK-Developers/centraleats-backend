@@ -4,13 +4,17 @@ import { IVendorRepository } from "../../domain/repositories/IVendorRepository";
 
 export class PrismaVendorRepository implements IVendorRepository {
   private toDomain(prismaVendor: any): Vendor {
+    let logoUrl = prismaVendor.logoUrl;
+    if (logoUrl && (logoUrl.includes("localhost:3000/uploads/") || logoUrl.includes("localhost:3001/uploads/"))) {
+      logoUrl = logoUrl.replace(/^https?:\/\/localhost:\d+\/uploads\//, "/uploads/");
+    }
     return Vendor.reconstitute(
       prismaVendor.id,
       prismaVendor.name,
       prismaVendor.description,
       prismaVendor.location,
       prismaVendor.phone,
-      prismaVendor.logoUrl,
+      logoUrl,
       prismaVendor.openingTime,
       prismaVendor.closingTime,
       prismaVendor.isActive,
