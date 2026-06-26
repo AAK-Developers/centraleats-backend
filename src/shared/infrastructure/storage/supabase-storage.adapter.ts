@@ -35,6 +35,9 @@ export class SupabaseStorageAdapter implements IStorageRepository {
       const filePath = path.join(uploadsDir, uniqueFileName);
       await fs.promises.writeFile(filePath, fileBuffer);
       
+      if (process.env.NODE_ENV === 'production') {
+        return `/uploads/${uniqueFileName}`;
+      }
       const port = process.env.PORT || 3000;
       const host = `http://localhost:${port}`;
       return `${host}/uploads/${uniqueFileName}`;
