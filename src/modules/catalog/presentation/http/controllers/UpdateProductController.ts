@@ -9,7 +9,7 @@ export class UpdateProductController {
 
   async handle(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       if (!id) {
         throw new AppError("Product ID is required", 400);
       }
