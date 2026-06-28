@@ -35,12 +35,7 @@ export class SupabaseStorageAdapter implements IStorageRepository {
       const filePath = path.join(uploadsDir, uniqueFileName);
       await fs.promises.writeFile(filePath, fileBuffer);
       
-      if (process.env.NODE_ENV === 'production') {
-        return `/uploads/${uniqueFileName}`;
-      }
-      const port = process.env.PORT || 3000;
-      const host = `http://localhost:${port}`;
-      return `${host}/uploads/${uniqueFileName}`;
+      return `/uploads/${uniqueFileName}`;
     } catch (err: any) {
       console.error(`[SupabaseStorageAdapter] Failed to save file locally: ${err.message}`);
       return `https://ui-avatars.com/api/?name=${encodeURIComponent(fileName)}&background=0D8ABC&color=fff&size=200`;
