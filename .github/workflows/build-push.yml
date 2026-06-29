@@ -35,7 +35,11 @@ jobs:
       run: |
         IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend"
         echo "Checking if image ${IMAGE_NAME}:sha-${{ github.sha }} exists on Docker Hub..."
-        if docker pull ${IMAGE_NAME}:sha-${{ github.sha }}; then
+        
+        status=0
+        docker pull ${IMAGE_NAME}:sha-${{ github.sha }} || status=$?
+        
+        if [ $status -eq 0 ]; then
           echo "Image exists! Promoting image..."
           docker tag ${IMAGE_NAME}:sha-${{ github.sha }} ${IMAGE_NAME}:${{ inputs.image_tag }}
           docker push ${IMAGE_NAME}:${{ inputs.image_tag }}
