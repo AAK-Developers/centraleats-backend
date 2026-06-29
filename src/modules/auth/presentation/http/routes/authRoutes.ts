@@ -40,12 +40,21 @@ router.get("/me", requireAuth, async (req: Request, res: Response, next: NextFun
           return;
         }
 
+        let role: "STUDENT" | "VENDOR" | "ADMIN" | "PENDING" = "PENDING";
+        const clerkRole = clerkUser?.publicMetadata?.role as string | undefined;
+        if (clerkRole) {
+          const normalized = clerkRole.toUpperCase();
+          if (normalized === "STUDENT" || normalized === "VENDOR" || normalized === "ADMIN") {
+            role = normalized as "STUDENT" | "VENDOR" | "ADMIN";
+          }
+        }
+
         user = await userRepository.create({
           clerkId,
           email,
           fullName,
           avatarUrl,
-          role: "STUDENT",
+          role,
           isActive: true,
         });
       } catch (err: any) {

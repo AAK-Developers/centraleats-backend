@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────
-// CentralEats — Schema Prisma v1.0
+// CentralEats — Schema Prisma v3.0
 // Fuente de verdad del modelo relacional.
-// Fecha: 2026-06-02
+// Fecha: 2026-06-23
 // ─────────────────────────────────────────────
 
 generator client {
@@ -17,22 +17,23 @@ datasource db {
 // ═══════════════════════════════════════════════
 
 enum UserRole {
+  PENDING
   STUDENT
   VENDOR
   ADMIN
 }
 
 /// Ciclo de vida de una orden (7 fases + 1 excepción).
-/// Ver: Order Lifecycle Flow Diagram
+/// Lenguaje Ubicuo aprobado en Doc. 08.x v4.0
 enum OrderStatus {
   PENDING_PAYMENT // 1. Orden creada, esperando pago
-  PAID // 2. Pago confirmado
-  RECEIVED // 3. Vendor recibió la orden
-  PREPARING // 4. Vendor está preparando
-  READY // 5. Lista para recoger
-  PICKED_UP // 6. Cliente la recogió
-  COMPLETED // 7. Orden completada
-  CANCELLED // Excepción: orden cancelada
+  PAID            // 2. Pago confirmado por la plataforma
+  RECEIVED        // 3. Vendor recibió la notificación
+  PREPARING       // 4. Vendor está preparando el pedido
+  READY           // 5. Pedido listo para ser recogido
+  PICKED_UP       // 6. Estudiante recogió el pedido
+  COMPLETED       // 7. Ciclo de vida finalizado exitosamente
+  CANCELLED       // Excepción: orden cancelada en cualquier fase válida
 }
 
 enum PaymentStatus {
@@ -75,7 +76,7 @@ model User {
   email     String   @unique
   fullName  String?
   avatarUrl String?
-  role      UserRole @default(STUDENT)
+  role      UserRole @default(PENDING)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -83,25 +84,26 @@ model User {
   // Relations
   orders        Order[]
   notifications Notification[]
-  vendors       Vendor[] // 1:N — un usuario VENDOR puede tener varios locales
+  vendor        Vendor? // 1:1 — un usuario VENDOR tiene máximo UN local en el campus UCE
 
   @@index([clerkId])
   @@index([role])
 }
 
-/// Establecimiento/puesto de comida dentro del campus.
-/// Relación 1:N con User (un VENDOR puede administrar varios locales).
+/// Establecimiento/puesto de comida dentro del campus UCE.
+/// Restricción de dominio: 1 propietario = 1 local (ownerId @unique).
+/// Todos los campos de perfil son REQUERIDOS para garantizar la integridad del catálogo.
 model Vendor {
   id          String   @id @default(uuid())
   name        String
   description String?
-  location    String? // String libre para MVP. Coordenadas post-MVP.
-  phone       String?
+  location    String   // Obligatorio: ubicación física dentro del campus UCE
+  phone       String   // Obligatorio: contacto del local
   logoUrl     String?
-  openingTime String?
-  closingTime String?
+  openingTime String   // Formato HH:mm (ej: "08:00")
+  closingTime String   // Formato HH:mm (ej: "17:00")
   isActive    Boolean  @default(true)
-  ownerId     String // SIN @unique → permite 1:N (User puede tener N vendors)
+  ownerId     String   @unique // @unique: 1 dueño = 1 local en el campus UCE
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -110,31 +112,33 @@ model Vendor {
   products Product[]
   orders   Order[]
 
-  @@index([ownerId])
   @@index([isActive])
 }
 
-/// Categoría de productos (ej: Bebidas, Almuerzos, Snacks).
+/// Categoría de productos del catálogo.
 /// Gestionada exclusivamente por ADMIN.
+/// Categorías amplias para soportar diversidad gastronómica del campus.
 model Category {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
   products Product[]
 }
 
 /// Producto del catálogo de un Vendor.
-/// CHECK constraints (stock >= 0, price > 0) se aplican via migration SQL.
+/// ARQUITECTURA DE CENTAVOS: price en Int ($3.50 → 350 centavos).
+/// stock OBLIGATORIO: sin default implícito. Garantiza auditoría de inventario.
 model Product {
   id          String   @id @default(uuid())
   name        String
   description String?
-  price       Decimal  @db.Decimal(10, 2)
-  stock       Int      @default(0)
+  price       Int      // Centavos. Ej: $3.50 → 350. Sin Decimal para erradicar errores IEEE 754.
+  stock       Int      // OBLIGATORIO. Sin @default. El Vendor siempre declara su inventario inicial.
   imageUrl    String?
   isAvailable Boolean  @default(true)
   isActive    Boolean  @default(true)
@@ -151,16 +155,18 @@ model Product {
   @@index([vendorId])
   @@index([categoryId])
   @@index([isActive])
+  @@index([isAvailable])
 }
 
-/// Pedido realizado por un estudiante a un vendor.
-/// Estado sigue el Order Lifecycle Flow Diagram (7 fases).
+/// Pedido realizado por un estudiante a un Vendor.
+/// Estado sigue el Order Lifecycle (Doc. 08.x) con 7 fases + 1 excepción.
+/// ARQUITECTURA DE CENTAVOS: totalAmount en Int.
 model Order {
   id          String      @id @default(uuid())
   userId      String
   vendorId    String
   status      OrderStatus @default(PENDING_PAYMENT)
-  totalAmount Decimal     @db.Decimal(10, 2)
+  totalAmount Int         // Centavos. Consistencia matemática con Product.price.
   pickupCode  String?     @unique
   notes       String?
   createdAt   DateTime    @default(now())
@@ -179,14 +185,14 @@ model Order {
   @@index([createdAt])
 }
 
-/// Línea de detalle de un pedido.
-/// Inmutable después de creación, pero updatedAt incluido por consistencia.
+/// Línea de detalle de un pedido. Inmutable después de creación.
+/// ARQUITECTURA DE CENTAVOS: unitPrice captura el precio histórico en centavos.
 model OrderItem {
   id        String   @id @default(uuid())
   orderId   String
   productId String
   quantity  Int
-  unitPrice Decimal  @db.Decimal(10, 2)
+  unitPrice Int      // Precio histórico del producto al momento de la compra (centavos).
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -199,23 +205,22 @@ model OrderItem {
 
 /// Registro de pago de un pedido.
 /// idempotencyKey previene cobros duplicados.
-/// method es enum (no String libre) por recomendación del experto DB.
+/// ARQUITECTURA DE CENTAVOS: amount en Int.
 model Payment {
-  id             String         @id @default(uuid())
-  orderId        String         @unique
-  amount         Decimal        @db.Decimal(10, 2)
-  status         PaymentStatus  @default(PENDING)
+  id             String        @id @default(uuid())
+  orderId        String        @unique
+  amount         Int           // Centavos. Alineado con Order.totalAmount.
+  status         PaymentStatus @default(PENDING)
   method         PaymentMethod?
-  idempotencyKey String         @unique
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  idempotencyKey String        @unique
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   // Relations
   order Order @relation(fields: [orderId], references: [id])
 }
 
 /// Notificación en tiempo real para un usuario.
-/// updatedAt incluido para rastrear cuándo se marcó como leída.
 model Notification {
   id        String           @id @default(uuid())
   userId    String

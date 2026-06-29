@@ -5,7 +5,7 @@ export class User {
     public readonly email: string,
     public readonly fullName: string | null,
     public readonly avatarUrl: string | null,
-    public readonly role: "STUDENT" | "VENDOR" | "ADMIN",
+    public readonly role: "PENDING" | "STUDENT" | "VENDOR" | "ADMIN",
     public readonly isActive: boolean,
     public readonly createdAt: Date,
     public readonly updatedAt: Date

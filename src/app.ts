@@ -1,5 +1,6 @@
 import cors from "cors";
 import express from "express";
+import path from "path";
 
 import { env } from "./config/env";
 import { getAllowedOrigins } from "./config/cors";
@@ -33,6 +34,9 @@ export const createApp = () => {
   app.use("/api/webhooks/clerk", express.raw({ type: "application/json" }), clerkWebhookRoutes);
 
   app.use(express.json());
+
+  // Static files middleware for uploaded images
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
   app.get("/health", (_req, res) => {
     res.status(200).json({ status: "ok" });

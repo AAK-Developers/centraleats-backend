@@ -7,6 +7,7 @@ export class PrismaCategoryRepository implements ICategoryRepository {
     return new Category(
       prismaCategory.id,
       prismaCategory.name,
+      prismaCategory.description,   // Added: maps description from schema v3.0
       prismaCategory.isActive,
       prismaCategory.createdAt,
       prismaCategory.updatedAt
@@ -31,6 +32,7 @@ export class PrismaCategoryRepository implements ICategoryRepository {
     const prismaCategory = await prisma.category.create({
       data: {
         name: category.name,
+        description: category.description,  // Added: persists description
         isActive: category.isActive,
       },
     });
@@ -42,6 +44,7 @@ export class PrismaCategoryRepository implements ICategoryRepository {
       where: { id },
       data: {
         name: data.name,
+        description: data.description,     // Added: updates description
         isActive: data.isActive,
       },
     });

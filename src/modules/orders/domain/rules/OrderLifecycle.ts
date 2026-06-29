@@ -1,29 +1,29 @@
-import { OrderStatus } from "./OrderStatus";
+import { OrderStatus } from "@prisma/client";
 
-export class InvalidStatusTransitionError extends Error {
-  constructor(from: OrderStatus, to: OrderStatus) {
-    super(`Cannot transition order status from ${from} to ${to}`);
-    this.name = "InvalidStatusTransitionError";
-  }
-}
-
-const validTransitions: Record<OrderStatus, OrderStatus[]> = {
-  [OrderStatus.CREATED]: [OrderStatus.PREPARING, OrderStatus.CANCELLED],
-  [OrderStatus.PREPARING]: [OrderStatus.READY, OrderStatus.CANCELLED],
-  [OrderStatus.READY]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
-  [OrderStatus.COMPLETED]: [],
-  [OrderStatus.CANCELLED]: [],
+/**
+ * Order Lifecycle State Machine — Lenguaje Ubicuo v4.0 (Doc. 08.x)
+ * 
+ * 1. PENDING_PAYMENT  - Orden creada, esperando pago
+ * 2. PAID             - Pago confirmado
+ * 3. RECEIVED         - Vendor recibió la notificación
+ * 4. PREPARING        - Vendor está preparando
+ * 5. READY            - Lista para recoger
+ * 6. PICKED_UP        - Cliente recogió la orden
+ * 7. COMPLETED        - Ciclo finalizado exitosamente
+ * x. CANCELLED        - Excepción: cancelada
+ */
+export const OrderLifecycle: Record<OrderStatus, OrderStatus[]> = {
+  PENDING_PAYMENT: [OrderStatus.PAID, OrderStatus.RECEIVED, OrderStatus.CANCELLED],
+  PAID: [OrderStatus.RECEIVED, OrderStatus.CANCELLED],
+  RECEIVED: [OrderStatus.PREPARING, OrderStatus.CANCELLED],
+  PREPARING: [OrderStatus.READY, OrderStatus.CANCELLED],
+  READY: [OrderStatus.PICKED_UP], // Ya no se puede cancelar si está lista
+  PICKED_UP: [OrderStatus.COMPLETED],
+  COMPLETED: [], // Estado final
+  CANCELLED: [], // Estado final
 };
 
-export class OrderLifecycle {
-  static canTransition(currentStatus: OrderStatus, newStatus: OrderStatus): boolean {
-    return validTransitions[currentStatus].includes(newStatus);
-  }
-
-  static transition(currentStatus: OrderStatus, newStatus: OrderStatus): OrderStatus {
-    if (!this.canTransition(currentStatus, newStatus)) {
-      throw new InvalidStatusTransitionError(currentStatus, newStatus);
-    }
-    return newStatus;
-  }
+export function canTransitionTo(currentStatus: OrderStatus, targetStatus: OrderStatus): boolean {
+  if (currentStatus === targetStatus) return false;
+  return OrderLifecycle[currentStatus].includes(targetStatus);
 }

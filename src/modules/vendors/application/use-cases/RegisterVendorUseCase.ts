@@ -1,4 +1,5 @@
 import { createClerkClient } from "@clerk/backend";
+import crypto from "crypto";
 import { IVendorRepository } from "../../domain/repositories/IVendorRepository";
 import { PrismaUserRepository } from "../../../users/infrastructure/persistence/PrismaUserRepository";
 import { Vendor } from "../../domain/entities/Vendor";
@@ -30,7 +31,7 @@ export class RegisterVendorUseCase {
   constructor(
     private readonly vendorRepository: IVendorRepository,
     private readonly storageRepository: IStorageRepository
-  ) {}
+  ) { }
 
   async execute(dto: RegisterVendorDTO): Promise<Vendor> {
     const user = await this.userRepository.findByClerkId(dto.clerkId);
@@ -52,27 +53,32 @@ export class RegisterVendorUseCase {
       }
     }
 
+    const vendorId = crypto.randomUUID(); // Generate early to use in storage path
+
     let logoUrl: string | null = null;
     if (dto.image) {
       logoUrl = await this.storageRepository.uploadImage(
         dto.image.buffer,
         dto.image.originalname,
         dto.image.mimetype,
-        'vendor-logos' // Specific bucket for vendors
+        'vendor-logos', // Unified bucket for all media
+        `vendors/${vendorId}/logo` // Folder path guarantees ownership separation
       );
     }
 
-    const vendor = await this.vendorRepository.create({
+    const vendorEntity = Vendor.create({
+      id: vendorId,
       name: dto.name,
       description: dto.description || null,
-      location: dto.location || null,
-      phone: dto.phone || null,
-      openingTime: dto.openingTime || null,
-      closingTime: dto.closingTime || null,
+      location: dto.location || "",
+      phone: dto.phone || "",
+      openingTime: dto.openingTime || "",
+      closingTime: dto.closingTime || "",
       logoUrl,
-      isActive: true,
       ownerId: user.id,
     });
+
+    const vendor = await this.vendorRepository.create(vendorEntity);
 
     return vendor;
   }

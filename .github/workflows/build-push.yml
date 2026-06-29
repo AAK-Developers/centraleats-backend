@@ -30,7 +30,30 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Build and Push Docker image
+    - name: Check if image already exists (BORA promotion)
+      id: check-image
+      run: |
+        IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend"
+        echo "Checking if image ${IMAGE_NAME}:sha-${{ github.sha }} exists on Docker Hub..."
+        if docker pull ${IMAGE_NAME}:sha-${{ github.sha }}; then
+          echo "Image exists! Promoting image..."
+          docker tag ${IMAGE_NAME}:sha-${{ github.sha }} ${IMAGE_NAME}:${{ inputs.image_tag }}
+          docker push ${IMAGE_NAME}:${{ inputs.image_tag }}
+          
+          # If image_tag starts with 'v' (production release), also tag as latest
+          if [[ "${{ inputs.image_tag }}" =~ ^v[0-9] ]]; then
+            docker tag ${IMAGE_NAME}:sha-${{ github.sha }} ${IMAGE_NAME}:latest
+            docker push ${IMAGE_NAME}:latest
+          fi
+          
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "Image not found on Docker Hub. Proceeding to build."
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Build and Push Docker image (fallback)
+      if: steps.check-image.outputs.exists != 'true'
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -40,3 +63,10 @@ jobs:
           ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:${{ inputs.image_tag }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+
+    - name: Push latest tag for releases (fallback)
+      if: steps.check-image.outputs.exists != 'true' && startsWith(inputs.image_tag, 'v')
+      run: |
+        IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend"
+        docker tag ${IMAGE_NAME}:sha-${{ github.sha }} ${IMAGE_NAME}:latest
+        docker push ${IMAGE_NAME}:latest

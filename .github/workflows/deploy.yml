@@ -72,11 +72,28 @@ jobs:
         script: |
           echo "==== Iniciando despliegue de ${{ inputs.container_name }} (Tag: ${{ inputs.image_tag }}) ===="
           
+          # Limpiar imágenes no utilizadas para evitar disco lleno
+          echo "Limpiando espacio en disco de Docker..."
+          docker image prune -f || true
+          
           # Pull de la imagen más reciente
+          echo "Descargando imagen amwt24/centraleats-backend:${{ inputs.image_tag }}..."
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:${{ inputs.image_tag }}
+          if [ $? -ne 0 ]; then
+            echo "ERROR: Falló la descarga de la imagen desde Docker Hub."
+            exit 1
+          fi
+          
+          # Mostrar información de la imagen descargada para diagnóstico
+          echo "=== DETALLES DE LA IMAGEN DE DOCKER ==="
+          docker inspect ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:${{ inputs.image_tag }} | grep -E "Created|Id" || true
+          echo "========================================"
           
           # Verificar si existe contenedor previo
-          if docker ps -a --format '{{.Names}}' | grep -Eq "^${{ inputs.container_name }}$"; then
+          docker ps -a --format '{{.Names}}' | grep -Eq "^${{ inputs.container_name }}$"
+          HAS_CONTAINER=$?
+          
+          if [ $HAS_CONTAINER -eq 0 ]; then
             echo "Respaldando contenedor actual..."
             docker rm -f ${{ inputs.container_name }}-old || true
             docker stop ${{ inputs.container_name }} || true
@@ -103,6 +120,11 @@ jobs:
             -e SUPABASE_ANON_KEY='${{ secrets.SUPABASE_ANON_KEY }}' \
             -e SUPABASE_SERVICE_ROLE_KEY='${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}' \
             ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:${{ inputs.image_tag }}
+          
+          if [ $? -ne 0 ]; then
+            echo "ERROR: Falló el inicio del nuevo contenedor Docker."
+            exit 1
+          fi
           
           # Ejecutar migraciones en la base de datos (Supabase)
           echo "Ejecutando prisma migrate deploy..."

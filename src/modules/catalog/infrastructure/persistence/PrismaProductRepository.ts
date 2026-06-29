@@ -4,13 +4,17 @@ import { IProductRepository } from "../../domain/repositories/IProductRepository
 
 export class PrismaProductRepository implements IProductRepository {
   private toDomain(prismaProduct: any): Product {
-    return new Product(
+    let imageUrl = prismaProduct.imageUrl;
+    if (imageUrl && (imageUrl.includes("localhost:3000/uploads/") || imageUrl.includes("localhost:3001/uploads/"))) {
+      imageUrl = imageUrl.replace(/^https?:\/\/localhost:\d+\/uploads\//, "/uploads/");
+    }
+    return Product.reconstitute(
       prismaProduct.id,
       prismaProduct.name,
       prismaProduct.description,
-      Number(prismaProduct.price.toString()),
+      prismaProduct.price, // already Int in Prisma v3.0
       prismaProduct.stock,
-      prismaProduct.imageUrl,
+      imageUrl,
       prismaProduct.isAvailable,
       prismaProduct.isActive,
       prismaProduct.vendorId,
@@ -41,18 +45,47 @@ export class PrismaProductRepository implements IProductRepository {
     return prismaProducts.map((p: any) => this.toDomain(p));
   }
 
-  async create(product: Omit<Product, "id" | "createdAt" | "updatedAt">): Promise<Product> {
+  async listWithFilters(filters: { vendorId?: string; isAvailable?: boolean }): Promise<(Product & { vendorName: string })[]> {
+    const where: any = { isActive: true };
+    if (filters.vendorId) {
+      where.vendorId = filters.vendorId;
+    }
+    if (filters.isAvailable !== undefined) {
+      where.isAvailable = filters.isAvailable;
+    }
+
+    const prismaProducts = await prisma.product.findMany({
+      where,
+      include: {
+        vendor: {
+          select: { name: true },
+        },
+      },
+    });
+
+    return prismaProducts.map((p: any) => {
+      const product = this.toDomain(p);
+      return Object.assign(product, {
+        vendorName: p.vendor.name,
+      }) as Product & { vendorName: string };
+    });
+  }
+
+  async create(product: Product): Promise<Product> {
+    const data = product.toPrimitives();
+    
     const prismaProduct = await prisma.product.create({
       data: {
-        name: product.name,
-        description: product.description,
-        price: product.price,
-        stock: product.stock,
-        imageUrl: product.imageUrl,
-        isAvailable: product.isAvailable,
-        isActive: product.isActive,
-        vendorId: product.vendorId,
-        categoryId: product.categoryId,
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        stock: data.stock,
+        imageUrl: data.imageUrl,
+        isAvailable: data.isAvailable,
+        isActive: data.isActive,
+        vendorId: data.vendorId,
+        categoryId: data.categoryId,
       },
     });
     return this.toDomain(prismaProduct);
@@ -64,7 +97,7 @@ export class PrismaProductRepository implements IProductRepository {
       data: {
         name: data.name,
         description: data.description,
-        price: data.price,
+        price: data.price?.value,
         stock: data.stock,
         imageUrl: data.imageUrl,
         isAvailable: data.isAvailable,
