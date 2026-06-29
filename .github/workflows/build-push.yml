@@ -67,10 +67,3 @@ jobs:
           ${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend:${{ inputs.image_tag }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-
-    - name: Push latest tag for releases (fallback)
-      if: steps.check-image.outputs.exists != 'true' && startsWith(inputs.image_tag, 'v')
-      run: |
-        IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/centraleats-backend"
-        docker tag ${IMAGE_NAME}:sha-${{ github.sha }} ${IMAGE_NAME}:latest
-        docker push ${IMAGE_NAME}:latest
