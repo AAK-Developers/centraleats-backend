@@ -9,8 +9,6 @@ function serializeCategory(category: Category) {
   return {
     id: category.id,
     name: category.name,
-    description: category.description,
-    isActive: category.isActive,
   };
 }
 
@@ -21,10 +19,7 @@ export class GetCategoriesController {
     try {
       const categories = await this.categoryRepository.listActive();
 
-      res.status(200).json({
-        success: true,
-        data: categories.map(serializeCategory),
-      });
+      res.status(200).json(categories.map(serializeCategory));
     } catch (error: any) {
       res.status(500).json({ error: error.message || "Internal server error" });
     }
