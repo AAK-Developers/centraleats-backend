@@ -12,9 +12,12 @@ import clerkWebhookRoutes from "./modules/users/presentation/http/routes/clerkWe
 import { requireAuth } from "./shared/middlewares/requireAuth";
 import { protectedTestRoutes, authRoutes } from "./modules/auth";
 import { errorHandler } from "./shared/middlewares/errorHandler";
+import { requestLogger } from "./shared/middlewares/requestLogger";
 
 export const createApp = () => {
   const app = express();
+
+  app.use(requestLogger);
 
   app.use(
     cors({
