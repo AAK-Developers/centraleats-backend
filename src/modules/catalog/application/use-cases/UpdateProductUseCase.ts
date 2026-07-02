@@ -5,6 +5,8 @@ import { IStorageRepository } from "../../../../shared/domain/ports/storage.repo
 import { Product } from "../../domain/entities/Product";
 import { AppError } from "../../../../shared/errors/AppError";
 import { Money } from "../../../../shared/domain/value-objects/Money";
+import { PrismaCategoryRepository } from "../../infrastructure/persistence/PrismaCategoryRepository";
+import { publishEvent } from "../../../../config/mqtt";
 
 interface UpdateProductDTO {
   id: string;
@@ -25,6 +27,7 @@ interface UpdateProductDTO {
 
 export class UpdateProductUseCase {
   private readonly userRepository = new PrismaUserRepository();
+  private readonly categoryRepository = new PrismaCategoryRepository();
 
   constructor(
     private readonly productRepository: IProductRepository,
@@ -88,6 +91,30 @@ export class UpdateProductUseCase {
       vendorId: product.vendorId,
       categoryId: dto.categoryId,
     });
+
+    try {
+      if (updatedProduct.isActive) {
+        const category = await this.categoryRepository.findById(updatedProduct.categoryId);
+        publishEvent("centraleats/dishes/updates", {
+          action: "UPDATED",
+          dish: {
+            id: updatedProduct.id,
+            name: updatedProduct.name,
+            price: updatedProduct.price.value / 100,
+            restaurantId: updatedProduct.vendorId,
+            category: category ? category.name : "Comida",
+          },
+        });
+      } else {
+        publishEvent("centraleats/dishes/updates", {
+          action: "DELETED",
+          dishId: updatedProduct.id,
+          restaurantId: updatedProduct.vendorId,
+        });
+      }
+    } catch (err: any) {
+      // Ignored to avoid blocking HTTP flow if MQTT / Category resolution fails
+    }
 
     return updatedProduct;
   }

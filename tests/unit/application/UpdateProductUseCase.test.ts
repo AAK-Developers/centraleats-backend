@@ -7,9 +7,10 @@ import { mockDeep, DeepMockProxy } from "jest-mock-extended";
 import { IVendorRepository } from "../../../src/modules/vendors/domain/repositories/IVendorRepository";
 import { IStorageRepository } from "../../../src/shared/domain/ports/storage.repository";
 
-// Setup mocks for PrismaUserRepository and PrismaVendorRepository
+// Setup mocks for PrismaUserRepository, PrismaVendorRepository, PrismaCategoryRepository and MQTT helper
 const mockFindByClerkId = jest.fn();
 const mockFindByOwnerId = jest.fn();
+const mockCategoryFindById = jest.fn();
 
 jest.mock("../../../src/modules/users/infrastructure/persistence/PrismaUserRepository", () => ({
   PrismaUserRepository: jest.fn().mockImplementation(() => ({
@@ -21,6 +22,16 @@ jest.mock("../../../src/modules/vendors/infrastructure/persistence/PrismaVendorR
   PrismaVendorRepository: jest.fn().mockImplementation(() => ({
     findByOwnerId: mockFindByOwnerId,
   })),
+}));
+
+jest.mock("../../../src/modules/catalog/infrastructure/persistence/PrismaCategoryRepository", () => ({
+  PrismaCategoryRepository: jest.fn().mockImplementation(() => ({
+    findById: mockCategoryFindById,
+  })),
+}));
+
+jest.mock("../../../src/config/mqtt", () => ({
+  publishEvent: jest.fn(),
 }));
 
 describe("UpdateProductUseCase", () => {
@@ -75,6 +86,7 @@ describe("UpdateProductUseCase", () => {
     // Inject mocks and instantiate the use case
     useCase = new UpdateProductUseCase(mockProductRepo, mockVendorRepo, mockStorageRepo);
     jest.clearAllMocks();
+    mockCategoryFindById.mockResolvedValue({ id: "cat-1", name: "Comida Rápida" });
   });
 
   it("should successfully update product without a new image", async () => {

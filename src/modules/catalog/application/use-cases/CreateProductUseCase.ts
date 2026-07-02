@@ -5,6 +5,8 @@ import { PrismaUserRepository } from "../../../users/infrastructure/persistence/
 import { IStorageRepository } from "../../../../shared/domain/ports/storage.repository";
 import { Product } from "../../domain/entities/Product";
 import { AppError } from "../../../../shared/errors/AppError";
+import { PrismaCategoryRepository } from "../../infrastructure/persistence/PrismaCategoryRepository";
+import { publishEvent } from "../../../../config/mqtt";
 
 // vendorId is intentionally ABSENT from this DTO.
 // The server resolves the vendor from the authenticated clerkId to prevent BOLA/IDOR.
@@ -24,6 +26,7 @@ interface CreateProductDTO {
 
 export class CreateProductUseCase {
   private readonly userRepository = new PrismaUserRepository();
+  private readonly categoryRepository = new PrismaCategoryRepository();
 
   constructor(
     private readonly productRepository: IProductRepository,
@@ -77,6 +80,22 @@ export class CreateProductUseCase {
     });
 
     const product = await this.productRepository.create(productEntity);
+
+    try {
+      const category = await this.categoryRepository.findById(product.categoryId);
+      publishEvent("centraleats/dishes/updates", {
+        action: "CREATED",
+        dish: {
+          id: product.id,
+          name: product.name,
+          price: product.price.value / 100,
+          restaurantId: product.vendorId,
+          category: category ? category.name : "Comida",
+        },
+      });
+    } catch (err: any) {
+      // Ignored to avoid blocking HTTP flow if MQTT / Category resolution fails
+    }
 
     return product;
   }
