@@ -21,7 +21,7 @@ export const buildUserRoutes = (): Router => {
   router.post("/", requireAuth, (req, res, next) => registerUserController.handle(req, res, next));
 
   // DELETE /api/users/role - Clear role in database (reset to STUDENT) and clear Clerk publicMetadata
-  router.delete("/role", requireAuth, (req, res, next) => resetUserRoleController.handle(req, res, next));
+  router.delete("/roles", requireAuth, (req, res, next) => resetUserRoleController.handle(req, res, next));
 
   return router;
 };

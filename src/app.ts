@@ -47,10 +47,10 @@ export const createApp = () => {
 
   app.use("/api/users", createUsersModuleRouter());
   app.use("/api/student", createStudentModuleRouter());
-  app.use("/api/orders", createOrdersModuleRouter());
+  app.use("/api/order", createOrdersModuleRouter());
   app.use("/api", createCatalogModuleRouter());
-  app.use("/api/vendors", createVendorModuleRouter());
-  app.use("/api/restaurants", createVendorModuleRouter());
+  app.use("/api/vendor", createVendorModuleRouter());
+  app.use("/api/restaurant", createVendorModuleRouter());
   app.use("/api/auth", authRoutes);
   app.use("/api/protected-test", requireAuth, protectedTestRoutes);
 
