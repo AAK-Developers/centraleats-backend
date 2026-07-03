@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Socket.io Client Test - CentralEats</title>
+  <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f4f4f9;
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    button {
+      background: #0070f3;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+    }
+    button:hover {
+      background: #0051bb;
+    }
+    #log {
+      height: 250px;
+      overflow-y: auto;
+      background: #1e1e1e;
+      color: #00ff00;
+      font-family: monospace;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 15px;
+      white-space: pre-wrap;
+    }
+    .status {
+      font-weight: bold;
+      color: #ff9900;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Socket.io Connection Tester</h2>
+    
+    <label for="url">Backend Socket.io URL:</label>
+    <input type="text" id="url" value="http://localhost:3001" placeholder="http://localhost:3001">
+    
+    <label for="token">Clerk JWT Handshake Token:</label>
+    <input type="text" id="token" placeholder="Paste your Clerk JWT Token here">
+    
+    <button id="connectBtn">Connect to Socket.io</button>
+
+    <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
+      <label for="room">Room to join (optional):</label>
+      <input type="text" id="room" placeholder="vendor-1 or student-1">
+      <button id="joinBtn" disabled>Join Room</button>
+    </div>
+
+    <div>Connection Status: <span id="status" class="status">Disconnected</span></div>
+    
+    <h3>Received Events Log:</h3>
+    <div id="log">Logs will appear here...</div>
+  </div>
+
+  <script>
+    const urlInput = document.getElementById('url');
+    const tokenInput = document.getElementById('token');
+    const connectBtn = document.getElementById('connectBtn');
+    const roomInput = document.getElementById('room');
+    const joinBtn = document.getElementById('joinBtn');
+    const statusSpan = document.getElementById('status');
+    const logDiv = document.getElementById('log');
+
+    let socket = null;
+
+    function log(message) {
+      const time = new Date().toLocaleTimeString();
+      logDiv.textContent += `[${time}] ${message}\n`;
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    connectBtn.addEventListener('click', () => {
+      const url = urlInput.value.trim();
+      const token = tokenInput.value.trim();
+
+      if (!token) {
+        alert('Please provide a Clerk JWT token.');
+        return;
+      }
+
+      if (socket) {
+        socket.disconnect();
+      }
+
+      log(`Connecting to ${url}...`);
+      statusSpan.textContent = 'Connecting...';
+      statusSpan.style.color = '#ff9900';
+
+      // Connect to Socket.io and pass the token in auth object
+      socket = io(url, {
+        auth: { token },
+        transports: ['websocket']
+      });
+
+      socket.on('connect', () => {
+        statusSpan.textContent = 'Connected';
+        statusSpan.style.color = '#00cc00';
+        log(`✅ Connected successfully! Socket ID: ${socket.id}`);
+        joinBtn.disabled = false;
+      });
+
+      socket.on('connect_error', (err) => {
+        statusSpan.textContent = 'Error';
+        statusSpan.style.color = '#cc0000';
+        log(`❌ Connection Error: ${err.message}`);
+        console.error(err);
+      });
+
+      socket.on('disconnect', (reason) => {
+        statusSpan.textContent = 'Disconnected';
+        statusSpan.style.color = '#ff0000';
+        log(`⚠️ Disconnected: ${reason}`);
+        joinBtn.disabled = true;
+      });
+
+      // Listen to 'orderUpdated' events
+      socket.on('orderUpdated', (data) => {
+        log(`🔔 Received 'orderUpdated' event:\n${JSON.stringify(data, null, 2)}`);
+      });
+    });
+
+    joinBtn.addEventListener('click', () => {
+      const room = roomInput.value.trim();
+      if (!room || !socket) return;
+      
+      log(`Sending 'join_room' for: ${room}`);
+      socket.emit('join_room', room);
+    });
+  </script>
+</body>
+</html>
