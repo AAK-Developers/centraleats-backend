@@ -13,6 +13,7 @@ import { requireAuth } from "./shared/middlewares/requireAuth";
 import { protectedTestRoutes, authRoutes } from "./modules/auth";
 import { errorHandler } from "./shared/middlewares/errorHandler";
 import { requestLogger } from "./shared/middlewares/requestLogger";
+import { createStatsModuleRouter } from "./modules/stats";
 
 export const createApp = () => {
   const app = express();
@@ -51,6 +52,7 @@ export const createApp = () => {
   app.use("/api", createCatalogModuleRouter());
   app.use("/api/vendors", createVendorModuleRouter());
   app.use("/api/restaurants", createVendorModuleRouter());
+  app.use("/api/stats", createStatsModuleRouter());
   app.use("/api/auth", authRoutes);
   app.use("/api/protected-test", requireAuth, protectedTestRoutes);
 
