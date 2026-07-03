@@ -7,7 +7,7 @@ export class DeleteProductController {
 
   async handle(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const clerkId = req.auth?.userId;
 
       if (!clerkId) {
