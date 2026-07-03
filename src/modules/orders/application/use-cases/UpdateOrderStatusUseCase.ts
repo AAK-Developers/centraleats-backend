@@ -3,6 +3,7 @@ import { IOrderRepository } from "../../domain/repositories/IOrderRepository";
 import { PrismaUserRepository } from "../../../users/infrastructure/persistence/PrismaUserRepository";
 import { PrismaVendorRepository } from "../../../vendors/infrastructure/persistence/PrismaVendorRepository";
 import { AppError } from "../../../../shared/errors/AppError";
+import { emitOrderUpdated } from "../../../../infrastructure/websocket/socketServer";
 
 export class UpdateOrderStatusUseCase {
   private readonly userRepository = new PrismaUserRepository();
@@ -62,6 +63,16 @@ export class UpdateOrderStatusUseCase {
     order.transitionTo(targetStatus);
 
     // 3. Persist the updated status
-    return this.orderRepository.updateStatus(orderId, order.status);
+    const updatedOrder = await this.orderRepository.updateStatus(orderId, order.status);
+
+    // Emit real-time WebSocket update for order status change
+    emitOrderUpdated({
+      id: updatedOrder.id,
+      userId: updatedOrder.userId,
+      vendorId: updatedOrder.vendorId,
+      status: updatedOrder.status,
+    });
+
+    return updatedOrder;
   }
 }

@@ -3,6 +3,7 @@ import { IProductRepository } from "../../../catalog/domain/repositories/IProduc
 import { PrismaUserRepository } from "../../../users/infrastructure/persistence/PrismaUserRepository";
 import { StockError } from "../../domain/rules/StockError";
 import { AppError } from "../../../../shared/errors/AppError";
+import { emitOrderUpdated } from "../../../../infrastructure/websocket/socketServer";
 
 /**
  * DTO for CreateOrderUseCase.
@@ -64,6 +65,16 @@ export class CreateOrderUseCase {
       items: itemsWithPrice,
     };
 
-    return this.orderRepository.create(createInput);
+    const order = await this.orderRepository.create(createInput);
+
+    // Emit real-time WebSocket update for order creation
+    emitOrderUpdated({
+      id: order.id,
+      userId: order.userId,
+      vendorId: order.vendorId,
+      status: order.status,
+    });
+
+    return order;
   }
 }
