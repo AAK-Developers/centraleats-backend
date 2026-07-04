@@ -34,6 +34,9 @@ export const getAllowedOrigins = (): string[] => {
       "http://localhost:5173",
       "http://localhost:3000",
       "http://localhost:3001",
+      // Capacitor
+      "https://localhost",
+      "capacitor://localhost",
     ];
     localOrigins.forEach((local) => {
       if (!origins.includes(local)) {

@@ -23,6 +23,7 @@ export const createApp = () => {
   app.use(
     cors({
       origin: (origin, callback) => {
+        console.log("ORIGIN =>", origin);
         const allowedOrigins = getAllowedOrigins();
         if (!origin || allowedOrigins.includes(origin)) {
           callback(null, true);
