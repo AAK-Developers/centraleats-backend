@@ -14,6 +14,7 @@ import { protectedTestRoutes, authRoutes } from "./modules/auth";
 import { errorHandler } from "./shared/middlewares/errorHandler";
 import { requestLogger } from "./shared/middlewares/requestLogger";
 import { createStatsModuleRouter } from "./modules/stats";
+import { createMetricsModuleRouter } from "./modules/metrics";
 
 export const createApp = () => {
   const app = express();
@@ -54,6 +55,7 @@ export const createApp = () => {
   app.use("/api/vendors", createVendorModuleRouter());
   app.use("/api/restaurants", createVendorModuleRouter());
   app.use("/api/stats", createStatsModuleRouter());
+  app.use("/api/metrics", createMetricsModuleRouter());
   app.use("/api/auth", authRoutes);
   app.use("/api/protected-test", requireAuth, protectedTestRoutes);
 
