@@ -110,4 +110,21 @@ export const emitOrderUpdated = (order: {
     { orderId: order.id, status: order.status },
     `📡 Evento Socket.io 'orderUpdated' emitido para orden ${order.id}: ${order.status}`
   );
+
+  // Trigger metrics refresh for the vendor dashboard
+  emitMetricsUpdated(order.vendorId);
+};
+
+export const emitMetricsUpdated = (vendorId: string): void => {
+  if (!ioInstance) {
+    logger.warn("Socket.io is not initialized. Skipping metrics emission.");
+    return;
+  }
+  const payload = { vendorId, timestamp: Date.now() };
+  ioInstance.to(`user_${vendorId}`).emit("metrics.updated", payload);
+  ioInstance.to(vendorId).emit("metrics.updated", payload);
+  logger.info(
+    { vendorId },
+    `📊 Evento Socket.io 'metrics.updated' emitido para vendor ${vendorId}`
+  );
 };
