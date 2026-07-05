@@ -8,6 +8,7 @@ export class ClerkTokenVerifier {
     try {
       const payload = await verifyToken(token, {
         secretKey: env.CLERK_SECRET_KEY,
+        clockSkewInMs: 60000,
       });
 
       if (!payload || !payload.sub) {
