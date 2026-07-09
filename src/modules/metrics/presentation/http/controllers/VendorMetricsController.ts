@@ -1,3 +1,4 @@
+import { JSend } from "../../../../../shared/utils/JSend";
 import { Request, Response, NextFunction } from "express";
 import { AppError } from "../../../../../shared/errors/AppError";
 import { PrismaVendorRepository } from "../../../../vendors/infrastructure/persistence/PrismaVendorRepository";
@@ -40,14 +41,14 @@ export class VendorMetricsController {
     try {
       const vendor = await this.getVendor(req);
       if (!vendor) {
-        res.status(404).json({ success: false, message: "No restaurant found for this user", data: null });
+        JSend.error(res, 404, "No restaurant found for this user");
         return;
       }
 
       const range = (req.query.range as string) || "today";
       const data = await this.summaryUseCase.execute(vendor.id, range);
 
-      res.status(200).json({ success: true, message: "Summary metrics fetched", data });
+      JSend.success(res, 200, data, "Summary metrics fetched");
     } catch (error) {
       next(error);
     }
@@ -57,14 +58,14 @@ export class VendorMetricsController {
     try {
       const vendor = await this.getVendor(req);
       if (!vendor) {
-        res.status(404).json({ success: false, message: "No restaurant found for this user", data: null });
+        JSend.error(res, 404, "No restaurant found for this user");
         return;
       }
 
       const range = (req.query.range as string) || "today";
       const data = await this.ordersByStatusUseCase.execute(vendor.id, range);
 
-      res.status(200).json({ success: true, message: "Orders by status fetched", data });
+      JSend.success(res, 200, data, "Orders by status fetched");
     } catch (error) {
       next(error);
     }
@@ -74,7 +75,7 @@ export class VendorMetricsController {
     try {
       const vendor = await this.getVendor(req);
       if (!vendor) {
-        res.status(404).json({ success: false, message: "No restaurant found for this user", data: null });
+        JSend.error(res, 404, "No restaurant found for this user");
         return;
       }
 
@@ -82,7 +83,7 @@ export class VendorMetricsController {
       const bucket = (req.query.bucket as string) === "day" ? "day" : "hour";
       const data = await this.salesTimeseriesUseCase.execute(vendor.id, range, bucket);
 
-      res.status(200).json({ success: true, message: "Sales timeseries fetched", data });
+      JSend.success(res, 200, data, "Sales timeseries fetched");
     } catch (error) {
       next(error);
     }
@@ -92,7 +93,7 @@ export class VendorMetricsController {
     try {
       const vendor = await this.getVendor(req);
       if (!vendor) {
-        res.status(404).json({ success: false, message: "No restaurant found for this user", data: null });
+        JSend.error(res, 404, "No restaurant found for this user");
         return;
       }
 
@@ -100,7 +101,7 @@ export class VendorMetricsController {
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
       const data = await this.topProductsUseCase.execute(vendor.id, range, limit);
 
-      res.status(200).json({ success: true, message: "Top products fetched", data });
+      JSend.success(res, 200, data, "Top products fetched");
     } catch (error) {
       next(error);
     }
@@ -110,7 +111,7 @@ export class VendorMetricsController {
     try {
       const vendor = await this.getVendor(req);
       if (!vendor) {
-        res.status(404).json({ success: false, message: "No restaurant found for this user", data: null });
+        JSend.error(res, 404, "No restaurant found for this user");
         return;
       }
 
@@ -118,7 +119,7 @@ export class VendorMetricsController {
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
       const data = await this.topCustomersUseCase.execute(vendor.id, range, limit);
 
-      res.status(200).json({ success: true, message: "Top customers fetched", data });
+      JSend.success(res, 200, data, "Top customers fetched");
     } catch (error) {
       next(error);
     }
@@ -128,14 +129,14 @@ export class VendorMetricsController {
     try {
       const vendor = await this.getVendor(req);
       if (!vendor) {
-        res.status(404).json({ success: false, message: "No restaurant found for this user", data: null });
+        JSend.error(res, 404, "No restaurant found for this user");
         return;
       }
 
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
       const data = await this.recentOrdersUseCase.execute(vendor.id, limit);
 
-      res.status(200).json({ success: true, message: "Recent orders fetched", data });
+      JSend.success(res, 200, data, "Recent orders fetched");
     } catch (error) {
       next(error);
     }

@@ -1,3 +1,4 @@
+import { JSend } from "../../../../../shared/utils/JSend";
 import { Request, Response, NextFunction } from "express";
 import { GetVendorOrdersUseCase } from "../../../application/use-cases/GetVendorOrdersUseCase";
 import { AppError } from "../../../../../shared/errors/AppError";
@@ -14,10 +15,7 @@ export class GetVendorOrdersController {
 
       const orders = await this.getVendorOrdersUseCase.execute(vendorId);
 
-      res.status(200).json({
-        success: true,
-        data: orders,
-      });
+      JSend.success(res, 200, orders);
     } catch (error) {
       next(error);
     }

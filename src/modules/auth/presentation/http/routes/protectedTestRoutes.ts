@@ -1,3 +1,4 @@
+import { JSend } from "../../../../../shared/utils/JSend";
 import { Router, Request, Response } from "express";
 import { requireRole } from "../../../../../shared/middlewares/requireRole";
 import { AuthMeResponseDTO } from "../../../application/dto/AuthMeResponseDTO";
@@ -18,7 +19,7 @@ router.get("/student", requireRole(["STUDENT", "ADMIN"]), (req: Request, res: Re
   const user = req.auth?.user;
   
   if (!user) {
-    res.status(500).json({ error: "Context not enriched" });
+    JSend.error(res, 500, "Context not enriched");
     return;
   }
 

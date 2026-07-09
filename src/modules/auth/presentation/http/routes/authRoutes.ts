@@ -1,3 +1,4 @@
+import { JSend } from "../../../../../shared/utils/JSend";
 import { Router, Request, Response, NextFunction } from "express";
 import { createClerkClient } from "@clerk/backend";
 import { env } from "../../../../../config/env";
@@ -15,7 +16,7 @@ router.get("/me", requireAuth, async (req: Request, res: Response, next: NextFun
     const clerkId = req.auth?.userId;
 
     if (!clerkId) {
-      res.status(401).json({ error: "Unauthorized: Missing authentication context" });
+      JSend.error(res, 401, "Unauthorized: Missing authentication context");
       return;
     }
 
@@ -36,7 +37,7 @@ router.get("/me", requireAuth, async (req: Request, res: Response, next: NextFun
         }
 
         if (!email) {
-          res.status(400).json({ error: "Email is required and could not be retrieved from Clerk" });
+          JSend.error(res, 400, "Email is required and could not be retrieved from Clerk");
           return;
         }
 
@@ -59,19 +60,19 @@ router.get("/me", requireAuth, async (req: Request, res: Response, next: NextFun
         });
       } catch (err: any) {
         console.error("[authRoutes] Failed to auto-register user on /me:", err.message);
-        res.status(404).json({ error: `User profile not found in system and auto-registration failed: ${err.message}` });
+        JSend.error(res, 404, `User profile not found in system and auto-registration failed: ${err.message}`);
         return;
       }
     }
 
     if (!user.isActive) {
-      res.status(403).json({ error: "Forbidden: Account is deactivated" });
+      JSend.error(res, 403, "Forbidden: Account is deactivated");
       return;
     }
 
     const responseDto = new AuthMeResponseDTO(user);
 
-    res.status(200).json(responseDto);
+    JSend.success(res, 200, responseDto);
   } catch (error) {
     next(error);
   }
