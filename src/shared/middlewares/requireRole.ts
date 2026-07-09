@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { PrismaUserRepository } from "../../modules/users/infrastructure/persistence/PrismaUserRepository";
+import { AppError } from "../errors/AppError";
 
 // Instanciamos el repositorio según las directrices de usar únicamente PrismaUserRepository
 const userRepository = new PrismaUserRepository();
@@ -10,8 +11,7 @@ export const requireRole = (allowedRoles: AllowedRole[]) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.auth || !req.auth.userId) {
-        res.status(401).json({ error: "Unauthorized: Missing authentication context" });
-        return;
+        throw new AppError("Unauthorized: Missing authentication context", 401);
       }
 
       const clerkId = req.auth.userId;
@@ -21,29 +21,22 @@ export const requireRole = (allowedRoles: AllowedRole[]) => {
 
       // Caso 2: Usuario no existe localmente
       if (!user) {
-        res.status(403).json({ error: "Forbidden: User profile not found" });
-        return;
+        throw new AppError("Forbidden: User profile not found", 403);
       }
 
       // Caso 3: Usuario tiene rol pendiente
       if (user.role === "PENDING") {
-        res.status(403).json({ 
-          error: "Forbidden: Role not assigned. Please complete onboarding.",
-          code: "ROLE_PENDING"
-        });
-        return;
+        throw new AppError("Forbidden: Role not assigned. Please complete onboarding.", 403);
       }
 
       // Caso 3: Usuario inactivo
       if (!user.isActive) {
-        res.status(403).json({ error: "Forbidden: Account is deactivated" });
-        return;
+        throw new AppError("Forbidden: Account is deactivated", 403);
       }
 
       // Caso 4: Rol insuficiente
       if (!allowedRoles.includes(user.role)) {
-        res.status(403).json({ error: "Forbidden: Insufficient permissions" });
-        return;
+        throw new AppError("Forbidden: Insufficient permissions", 403);
       }
 
       // Caso 5: Autorización exitosa - Enriquecimiento del request
@@ -51,8 +44,12 @@ export const requireRole = (allowedRoles: AllowedRole[]) => {
 
       next();
     } catch (error) {
+      if (error instanceof AppError) {
+        next(error);
+        return;
+      }
       console.error("[requireRole] Error during authorization:", error);
-      res.status(500).json({ error: "Internal server error during authorization" });
+      next(new AppError("Internal server error during authorization", 500));
     }
   };
 };

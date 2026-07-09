@@ -19,7 +19,7 @@ export const createVendorModuleRouter = (): Router => {
   const registerVendorUseCase = new RegisterVendorUseCase(vendorRepository, storageAdapter);
   const registerVendorController = new RegisterVendorController(registerVendorUseCase);
 
-  router.get("/", (req, res) => getVendorsController.handle(req, res));
+  router.get("/", (req, res, next) => getVendorsController.handle(req, res, next));
   // Middleware chain: requireAuth → requireRole(VENDOR) → multer (parses multipart body) → Controller (Zod validates req.body)
   router.post("/register", requireAuth, requireRole(["VENDOR"]), upload.single('image'), (req, res, next) => registerVendorController.handle(req, res, next));
 

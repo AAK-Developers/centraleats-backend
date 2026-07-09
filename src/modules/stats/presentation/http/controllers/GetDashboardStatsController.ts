@@ -1,3 +1,4 @@
+import { JSend } from "../../../../../shared/utils/JSend";
 import { Request, Response, NextFunction } from "express";
 import { GetDashboardStatsUseCase } from "../../../aplication/use-cases/GetDashboardStatsUseCase";
 
@@ -18,10 +19,7 @@ export class GetDashboardStatsController {
             const dashboard =
                 await this.getDashboardStatsUseCase.execute();
 
-            res.status(200).json({
-                success: true,
-                data: dashboard,
-            });
+            JSend.success(res, 200, dashboard);
 
         } catch (error) {
 

@@ -1,6 +1,7 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { PrismaProductRepository } from "../../../infrastructure/persistence/PrismaProductRepository";
 import { Product } from "../../../domain/entities/Product";
+import { JSend } from "../../../../../shared/utils/JSend";
 
 /**
  * Serializes a Product domain entity to a plain JSON-safe response object.
@@ -25,26 +26,36 @@ function serializeProduct(product: Product & { vendorName: string }) {
 export class GetProductsController {
   private readonly productRepository = new PrismaProductRepository();
 
-  async handle(req: Request, res: Response): Promise<void> {
+  async handle(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const vendorId = req.query.vendorId as string | undefined;
       const availableParam = req.query.available as string | undefined;
+      const search = (req.query.search || req.query.q) as string | undefined;
+      
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 12;
+      const skip = (page - 1) * limit;
 
       let isAvailable: boolean | undefined = undefined;
       if (availableParam === "true") isAvailable = true;
       if (availableParam === "false") isAvailable = false;
 
-      const products = await this.productRepository.listWithFilters({
+      const { data, total } = await this.productRepository.listWithFilters({
         vendorId,
         isAvailable,
+        search,
+        skip,
+        take: limit,
       });
 
-      res.status(200).json({
-        success: true,
-        data: products.map(serializeProduct),
+      JSend.success(res, 200, data.map(serializeProduct), "Productos obtenidos correctamente", {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message || "Internal server error" });
+      next(error);
     }
   }
 }

@@ -1,3 +1,4 @@
+import { JSend } from "../../../../../shared/utils/JSend";
 import { Request, Response, NextFunction } from "express";
 import { ClerkWebhookVerifier } from "../../../../../infrastructure/external-services/clerk/ClerkWebhookVerifier";
 import { SyncUserUseCase } from "../../../application/use-cases/SyncUserUseCase";
@@ -19,7 +20,7 @@ export class ClerkWebhookController {
          evt = verifier.verify(payload, req.headers);
       } catch (err: any) {
          console.error("[Webhook Error] Verification failed:", err.message);
-         return res.status(err.statusCode || 401).json({ success: false, message: err.message });
+         return JSend.error(res, err.statusCode || 401, err.message);
       }
 
       const eventType = evt.type;
@@ -31,7 +32,7 @@ export class ClerkWebhookController {
       else if (eventType === 'user.deleted') mappedEventType = 'deleted';
       else {
         // Clerk requires 200 OK for ignored events
-        return res.status(200).json({ success: true, message: "Ignored event type" });
+        return JSend.success(res, 200, null, "Ignored event type");
       }
 
       const primaryEmail = email_addresses && email_addresses.length > 0 ? email_addresses[0].email_address : undefined;
@@ -58,11 +59,11 @@ export class ClerkWebhookController {
 
       try {
         await syncUserUseCase.execute(dto);
-        return res.status(200).json({ success: true, message: "Webhook processed" });
+        return JSend.success(res, 200, null, "Webhook processed");
       } catch (err: any) {
         console.error("[Webhook Error] Processing failed:", err.message);
         if (err.statusCode) {
-          return res.status(err.statusCode).json({ success: false, message: err.message });
+          return JSend.error(res, err.statusCode, err.message);
         }
         throw err; // Global error handler catches 500s
       }

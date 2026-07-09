@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 
 import { AppError } from "../errors/AppError";
+import { JSend } from "../utils/JSend";
 
 export const errorHandler = (
   error: unknown,
@@ -9,18 +10,12 @@ export const errorHandler = (
   _next: NextFunction,
 ): void => {
   if (error instanceof AppError) {
-    res.status(error.statusCode).json({
-      error: error.name,
-      message: error.message,
-    });
+    JSend.error(res, error.statusCode, error.message);
     return;
   }
 
   // eslint-disable-next-line no-console
   console.error(error);
 
-  res.status(500).json({
-    error: "InternalServerError",
-    message: "An unexpected error occurred.",
-  });
+  JSend.error(res, 500, "An unexpected error occurred.");
 };
