@@ -45,7 +45,7 @@ export class PrismaProductRepository implements IProductRepository {
     return prismaProducts.map((p: any) => this.toDomain(p));
   }
 
-  async listWithFilters(filters: { vendorId?: string; isAvailable?: boolean; search?: string; skip?: number; take?: number }): Promise<{ data: (Product & { vendorName: string })[]; total: number }> {
+  async listWithFilters(filters: { vendorId?: string; isAvailable?: boolean; search?: string; skip?: number; take?: number }): Promise<{ data: (Product & { vendorName: string; vendorWaitTime: number; categoryName: string })[]; total: number }> {
     const where: any = { isActive: true };
     if (filters.vendorId) {
       where.vendorId = filters.vendorId;
@@ -68,6 +68,9 @@ export class PrismaProductRepository implements IProductRepository {
         take: filters.take,
         include: {
           vendor: {
+            select: { name: true, estimatedWaitTime: true },
+          },
+          category: {
             select: { name: true },
           },
         },
@@ -78,7 +81,9 @@ export class PrismaProductRepository implements IProductRepository {
       const product = this.toDomain(p);
       return Object.assign(product, {
         vendorName: p.vendor.name,
-      }) as Product & { vendorName: string };
+        vendorWaitTime: p.vendor.estimatedWaitTime,
+        categoryName: p.category.name,
+      }) as Product & { vendorName: string; vendorWaitTime: number; categoryName: string };
     });
 
     return { data, total };

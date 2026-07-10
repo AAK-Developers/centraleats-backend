@@ -9,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 // ═══════════════════════════════════════════════
@@ -27,13 +27,13 @@ enum UserRole {
 /// Lenguaje Ubicuo aprobado en Doc. 08.x v4.0
 enum OrderStatus {
   PENDING_PAYMENT // 1. Orden creada, esperando pago
-  PAID            // 2. Pago confirmado por la plataforma
-  RECEIVED        // 3. Vendor recibió la notificación
-  PREPARING       // 4. Vendor está preparando el pedido
-  READY           // 5. Pedido listo para ser recogido
-  PICKED_UP       // 6. Estudiante recogió el pedido
-  COMPLETED       // 7. Ciclo de vida finalizado exitosamente
-  CANCELLED       // Excepción: orden cancelada en cualquier fase válida
+  PAID // 2. Pago confirmado por la plataforma
+  RECEIVED // 3. Vendor recibió la notificación
+  PREPARING // 4. Vendor está preparando el pedido
+  READY // 5. Pedido listo para ser recogido
+  PICKED_UP // 6. Estudiante recogió el pedido
+  COMPLETED // 7. Ciclo de vida finalizado exitosamente
+  CANCELLED // Excepción: orden cancelada en cualquier fase válida
 }
 
 enum PaymentStatus {
@@ -94,18 +94,19 @@ model User {
 /// Restricción de dominio: 1 propietario = 1 local (ownerId @unique).
 /// Todos los campos de perfil son REQUERIDOS para garantizar la integridad del catálogo.
 model Vendor {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  location    String   // Obligatorio: ubicación física dentro del campus UCE
-  phone       String   // Obligatorio: contacto del local
-  logoUrl     String?
-  openingTime String   // Formato HH:mm (ej: "08:00")
-  closingTime String   // Formato HH:mm (ej: "17:00")
-  isActive    Boolean  @default(true)
-  ownerId     String   @unique // @unique: 1 dueño = 1 local en el campus UCE
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(uuid())
+  name              String
+  description       String?
+  location          String // Obligatorio: ubicación física dentro del campus UCE
+  phone             String // Obligatorio: contacto del local
+  logoUrl           String?
+  openingTime       String // Formato HH:mm (ej: "08:00")
+  closingTime       String // Formato HH:mm (ej: "17:00")
+  estimatedWaitTime Int      @default(15) // Tiempo de espera estimado en minutos
+  isActive          Boolean  @default(true)
+  ownerId           String   @unique // @unique: 1 dueño = 1 local en el campus UCE
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   // Relations
   owner    User      @relation(fields: [ownerId], references: [id])
@@ -137,8 +138,8 @@ model Product {
   id          String   @id @default(uuid())
   name        String
   description String?
-  price       Int      // Centavos. Ej: $3.50 → 350. Sin Decimal para erradicar errores IEEE 754.
-  stock       Int      // OBLIGATORIO. Sin @default. El Vendor siempre declara su inventario inicial.
+  price       Int // Centavos. Ej: $3.50 → 350. Sin Decimal para erradicar errores IEEE 754.
+  stock       Int // OBLIGATORIO. Sin @default. El Vendor siempre declara su inventario inicial.
   imageUrl    String?
   isAvailable Boolean  @default(true)
   isActive    Boolean  @default(true)
@@ -166,7 +167,7 @@ model Order {
   userId      String
   vendorId    String
   status      OrderStatus @default(PENDING_PAYMENT)
-  totalAmount Int         // Centavos. Consistencia matemática con Product.price.
+  totalAmount Int // Centavos. Consistencia matemática con Product.price.
   pickupCode  String?     @unique
   notes       String?
   createdAt   DateTime    @default(now())
@@ -192,7 +193,7 @@ model OrderItem {
   orderId   String
   productId String
   quantity  Int
-  unitPrice Int      // Precio histórico del producto al momento de la compra (centavos).
+  unitPrice Int // Precio histórico del producto al momento de la compra (centavos).
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -207,14 +208,14 @@ model OrderItem {
 /// idempotencyKey previene cobros duplicados.
 /// ARQUITECTURA DE CENTAVOS: amount en Int.
 model Payment {
-  id             String        @id @default(uuid())
-  orderId        String        @unique
-  amount         Int           // Centavos. Alineado con Order.totalAmount.
-  status         PaymentStatus @default(PENDING)
+  id             String         @id @default(uuid())
+  orderId        String         @unique
+  amount         Int // Centavos. Alineado con Order.totalAmount.
+  status         PaymentStatus  @default(PENDING)
   method         PaymentMethod?
-  idempotencyKey String        @unique
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  idempotencyKey String         @unique
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   // Relations
   order Order @relation(fields: [orderId], references: [id])

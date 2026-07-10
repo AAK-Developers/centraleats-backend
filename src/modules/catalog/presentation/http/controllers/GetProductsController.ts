@@ -7,7 +7,7 @@ import { JSend } from "../../../../../shared/utils/JSend";
  * Serializes a Product domain entity to a plain JSON-safe response object.
  * Critically: unpacks Money VO → price.value (Int centavos) per API contract.
  */
-function serializeProduct(product: Product & { vendorName: string }) {
+function serializeProduct(product: Product & { vendorName: string; vendorWaitTime: number; categoryName: string }) {
   return {
     id: product.id,
     name: product.name,
@@ -19,7 +19,9 @@ function serializeProduct(product: Product & { vendorName: string }) {
     isActive: product.isActive,
     vendorId: product.vendorId,
     categoryId: product.categoryId,
+    categoryName: product.categoryName,
     vendorName: product.vendorName,
+    vendorWaitTime: product.vendorWaitTime,
   };
 }
 
