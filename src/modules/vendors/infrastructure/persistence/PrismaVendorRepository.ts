@@ -17,6 +17,7 @@ export class PrismaVendorRepository implements IVendorRepository {
       logoUrl,
       prismaVendor.openingTime,
       prismaVendor.closingTime,
+      prismaVendor.estimatedWaitTime,
       prismaVendor.isActive,
       prismaVendor.ownerId,
       prismaVendor.createdAt,
@@ -73,6 +74,7 @@ export class PrismaVendorRepository implements IVendorRepository {
         logoUrl: vendor.logoUrl,
         openingTime: vendor.openingTime,  // Required string HH:mm (NOT NULL in schema v3.0)
         closingTime: vendor.closingTime,  // Required string HH:mm (NOT NULL in schema v3.0)
+        estimatedWaitTime: vendor.estimatedWaitTime,
         isActive: vendor.isActive,
         ownerId: vendor.ownerId,
       },
@@ -92,6 +94,7 @@ export class PrismaVendorRepository implements IVendorRepository {
         logoUrl: data.logoUrl,
         ...(data.openingTime !== undefined && { openingTime: data.openingTime }),
         ...(data.closingTime !== undefined && { closingTime: data.closingTime }),
+        ...(data.estimatedWaitTime !== undefined && { estimatedWaitTime: data.estimatedWaitTime }),
         isActive: data.isActive,
         ownerId: data.ownerId,
       },

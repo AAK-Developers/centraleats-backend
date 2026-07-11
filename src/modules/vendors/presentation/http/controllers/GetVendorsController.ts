@@ -17,6 +17,7 @@ function serializeVendor(vendor: Vendor) {
     logoUrl: vendor.logoUrl,
     openingTime: vendor.openingTime,
     closingTime: vendor.closingTime,
+    estimatedWaitTime: vendor.estimatedWaitTime,
     isActive: vendor.isActive,
     ownerId: vendor.ownerId,
   };
