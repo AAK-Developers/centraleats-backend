@@ -26,7 +26,7 @@ export class PrismaOrderRepository implements IOrderRepository {
 
     while (retries < MAX_RETRIES) {
       try {
-        const randomCode = crypto.randomBytes(3).toString("hex").toUpperCase();
+        const randomCode = Math.floor(1000 + Math.random() * 9000).toString();
 
         const prismaOrder = await prisma.$transaction(async (tx) => {
           // 1. Decremento atómico de stock (previene sobreventa)
