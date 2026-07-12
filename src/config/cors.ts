@@ -1,4 +1,4 @@
-﻿import { env } from "./env";
+import { env } from "./env";
 
 const formatOrigin = (url: string): string => {
   const trimmed = url.trim();
@@ -27,6 +27,18 @@ export const getAllowedOrigins = (): string[] => {
       }
     });
   }
+
+  // Always allow Capacitor mobile app origins
+  const mobileOrigins = [
+    "https://localhost",
+    "http://localhost",
+    "capacitor://localhost",
+  ];
+  mobileOrigins.forEach((mobile) => {
+    if (!origins.includes(mobile)) {
+      origins.push(mobile);
+    }
+  });
 
   // Always allow standard localhost origins during development or test
   if (env.NODE_ENV === "development" || env.NODE_ENV === "test") {

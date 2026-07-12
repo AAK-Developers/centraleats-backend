@@ -45,7 +45,7 @@ export class PrismaProductRepository implements IProductRepository {
     return prismaProducts.map((p: any) => this.toDomain(p));
   }
 
-  async listWithFilters(filters: { vendorId?: string; isAvailable?: boolean }): Promise<(Product & { vendorName: string })[]> {
+  async listWithFilters(filters: { vendorId?: string; isAvailable?: boolean; search?: string; skip?: number; take?: number }): Promise<{ data: (Product & { vendorName: string; vendorWaitTime: number; categoryName: string })[]; total: number }> {
     const where: any = { isActive: true };
     if (filters.vendorId) {
       where.vendorId = filters.vendorId;
@@ -53,22 +53,40 @@ export class PrismaProductRepository implements IProductRepository {
     if (filters.isAvailable !== undefined) {
       where.isAvailable = filters.isAvailable;
     }
+    if (filters.search) {
+      where.name = {
+        contains: filters.search,
+        mode: "insensitive"
+      };
+    }
 
-    const prismaProducts = await prisma.product.findMany({
-      where,
-      include: {
-        vendor: {
-          select: { name: true },
+    const [total, prismaProducts] = await prisma.$transaction([
+      prisma.product.count({ where }),
+      prisma.product.findMany({
+        where,
+        skip: filters.skip,
+        take: filters.take,
+        include: {
+          vendor: {
+            select: { name: true, estimatedWaitTime: true },
+          },
+          category: {
+            select: { name: true },
+          },
         },
-      },
-    });
+      })
+    ]);
 
-    return prismaProducts.map((p: any) => {
+    const data = prismaProducts.map((p: any) => {
       const product = this.toDomain(p);
       return Object.assign(product, {
         vendorName: p.vendor.name,
-      }) as Product & { vendorName: string };
+        vendorWaitTime: p.vendor.estimatedWaitTime,
+        categoryName: p.category.name,
+      }) as Product & { vendorName: string; vendorWaitTime: number; categoryName: string };
     });
+
+    return { data, total };
   }
 
   async create(product: Product): Promise<Product> {

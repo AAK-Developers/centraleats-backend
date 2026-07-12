@@ -18,6 +18,10 @@ jest.mock("../../../src/modules/users/infrastructure/persistence/PrismaUserRepos
   })),
 }));
 
+jest.mock("../../../src/infrastructure/websocket/socketServer", () => ({
+  emitOrderUpdated: jest.fn(),
+}));
+
 describe("CreateOrderUseCase", () => {
   let useCase: CreateOrderUseCase;
   let mockOrderRepo: ReturnType<typeof createMockOrderRepository>;

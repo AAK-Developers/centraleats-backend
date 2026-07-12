@@ -20,6 +20,10 @@ jest.mock("../../../src/modules/vendors/infrastructure/persistence/PrismaVendorR
   })),
 }));
 
+jest.mock("../../../src/infrastructure/websocket/socketServer", () => ({
+  emitOrderUpdated: jest.fn(),
+}));
+
 describe("UpdateOrderStatusUseCase", () => {
   let useCase: UpdateOrderStatusUseCase;
   let mockOrderRepo: ReturnType<typeof createMockOrderRepository>;

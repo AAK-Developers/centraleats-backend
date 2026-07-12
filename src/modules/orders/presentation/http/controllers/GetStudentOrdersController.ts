@@ -1,3 +1,4 @@
+import { JSend } from "../../../../../shared/utils/JSend";
 import { Request, Response, NextFunction } from "express";
 import { GetStudentOrdersUseCase } from "../../../application/use-cases/GetStudentOrdersUseCase";
 import { AppError } from "../../../../../shared/errors/AppError";
@@ -30,10 +31,7 @@ export class GetStudentOrdersController {
 
       const orders = await this.getStudentOrdersUseCase.execute(clerkId, { status, active });
 
-      res.status(200).json({
-        success: true,
-        data: orders,
-      });
+      JSend.success(res, 200, orders);
     } catch (error) {
       next(error);
     }

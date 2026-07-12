@@ -9,6 +9,7 @@ interface CreateVendorProps {
   logoUrl: string | null;
   openingTime: string;
   closingTime: string;
+  estimatedWaitTime: number;
   ownerId: string;
 }
 
@@ -24,6 +25,7 @@ export class Vendor {
     public readonly logoUrl: string | null,
     public readonly openingTime: string,    // Obligatorio: formato HH:mm
     public readonly closingTime: string,    // Obligatorio: formato HH:mm
+    public readonly estimatedWaitTime: number,
     public readonly isActive: boolean,
     public readonly ownerId: string,        // @unique en DB: 1 dueño = 1 local
     public readonly createdAt: Date,
@@ -60,6 +62,7 @@ export class Vendor {
       props.logoUrl,
       props.openingTime,
       props.closingTime,
+      props.estimatedWaitTime,
       true, // isActive por defecto
       props.ownerId,
       new Date(),
@@ -80,6 +83,7 @@ export class Vendor {
     logoUrl: string | null,
     openingTime: string,
     closingTime: string,
+    estimatedWaitTime: number,
     isActive: boolean,
     ownerId: string,
     createdAt: Date,
@@ -94,6 +98,7 @@ export class Vendor {
       logoUrl,
       openingTime,
       closingTime,
+      estimatedWaitTime,
       isActive,
       ownerId,
       createdAt,

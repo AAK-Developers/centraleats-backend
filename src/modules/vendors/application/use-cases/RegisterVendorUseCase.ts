@@ -76,6 +76,7 @@ export class RegisterVendorUseCase {
       closingTime: dto.closingTime || "",
       logoUrl,
       ownerId: user.id,
+      estimatedWaitTime: 15,
     });
 
     const vendor = await this.vendorRepository.create(vendorEntity);

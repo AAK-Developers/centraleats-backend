@@ -17,6 +17,7 @@ export class PrismaVendorRepository implements IVendorRepository {
       logoUrl,
       prismaVendor.openingTime,
       prismaVendor.closingTime,
+      prismaVendor.estimatedWaitTime,
       prismaVendor.isActive,
       prismaVendor.ownerId,
       prismaVendor.createdAt,
@@ -40,11 +41,26 @@ export class PrismaVendorRepository implements IVendorRepository {
     return prismaVendor ? this.toDomain(prismaVendor) : null;
   }
 
-  async listActive(): Promise<Vendor[]> {
-    const prismaVendors = await prisma.vendor.findMany({
-      where: { isActive: true },
-    });
-    return prismaVendors.map((v: any) => this.toDomain(v));
+  async listActive(filters?: { search?: string; skip?: number; take?: number }): Promise<{ data: Vendor[], total: number }> {
+    const where: any = { isActive: true };
+    if (filters?.search) {
+      where.name = {
+        contains: filters.search,
+        mode: "insensitive"
+      };
+    }
+
+    const [total, prismaVendors] = await prisma.$transaction([
+      prisma.vendor.count({ where }),
+      prisma.vendor.findMany({
+        where,
+        skip: filters?.skip,
+        take: filters?.take,
+      })
+    ]);
+
+    const data = prismaVendors.map((v: any) => this.toDomain(v));
+    return { data, total };
   }
 
   async create(vendor: Vendor): Promise<Vendor> {
@@ -58,6 +74,7 @@ export class PrismaVendorRepository implements IVendorRepository {
         logoUrl: vendor.logoUrl,
         openingTime: vendor.openingTime,  // Required string HH:mm (NOT NULL in schema v3.0)
         closingTime: vendor.closingTime,  // Required string HH:mm (NOT NULL in schema v3.0)
+        estimatedWaitTime: vendor.estimatedWaitTime,
         isActive: vendor.isActive,
         ownerId: vendor.ownerId,
       },
@@ -77,6 +94,7 @@ export class PrismaVendorRepository implements IVendorRepository {
         logoUrl: data.logoUrl,
         ...(data.openingTime !== undefined && { openingTime: data.openingTime }),
         ...(data.closingTime !== undefined && { closingTime: data.closingTime }),
+        ...(data.estimatedWaitTime !== undefined && { estimatedWaitTime: data.estimatedWaitTime }),
         isActive: data.isActive,
         ownerId: data.ownerId,
       },
