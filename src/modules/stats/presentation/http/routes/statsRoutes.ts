@@ -1,8 +1,6 @@
 import { Router } from "express";
+import cors from "cors";
 import { getDashboardStatsController } from "../../../dependencies";
-
-import { requireAuth } from "../../../../../shared/middlewares/requireAuth";
-import { requireRole } from "../../../../../shared/middlewares/requireRole";
 
 const router = Router();
 
@@ -11,8 +9,7 @@ const router = Router();
  */
 router.get(
     "/dashboard",
-    requireAuth,
-    requireRole(["ADMIN"]),
+    cors({ origin: "*" }),
     getDashboardStatsController.handle
 );
 
