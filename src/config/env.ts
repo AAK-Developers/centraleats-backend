@@ -13,6 +13,8 @@ const envSchema = z.object({
   CLERK_SECRET_KEY: z.string().startsWith("sk_", "CLERK_SECRET_KEY must start with sk_"),
   CLERK_PUBLISHABLE_KEY: z.string().startsWith("pk_", "CLERK_PUBLISHABLE_KEY must start with pk_").optional(),
   CLERK_WEBHOOK_SECRET: z.string().min(1, "CLERK_WEBHOOK_SECRET is required"),
+  SUPABASE_PROJECT_URL: z.string().url().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
 });
 
 export const env = envSchema.parse(process.env);

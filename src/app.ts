@@ -53,7 +53,6 @@ export const createApp = () => {
   app.use("/api/orders", createOrdersModuleRouter());
   app.use("/api", createCatalogModuleRouter());
   app.use("/api/vendors", createVendorModuleRouter());
-  app.use("/api/restaurants", createVendorModuleRouter());
   app.use("/api/stats", createStatsModuleRouter());
   app.use("/api/metrics", createMetricsModuleRouter());
   app.use("/api/auth", authRoutes);

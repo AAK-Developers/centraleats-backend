@@ -5,6 +5,7 @@ import { env } from "../../config/env";
 import { getAllowedOrigins } from "../../config/cors";
 import { clerkTokenVerifier } from "../external-services/clerk/ClerkTokenVerifier";
 import { logger } from "../../shared/infrastructure/logging/logger";
+import { prisma } from "../database/prismaClient";
 
 export const ORDER_SOCKET_EVENTS = [
   "order.created",
@@ -50,7 +51,22 @@ export const configureWebSocket = (httpServer: HttpServer): SocketIOServer => {
       }
 
       const decoded = await clerkTokenVerifier.verify(token);
-      socket.data = { ...socket.data, userId: decoded.userId };
+      
+      // Obtener el ID interno de la base de datos (y el vendor si aplica)
+      const user = await prisma.user.findUnique({
+        where: { clerkId: decoded.userId },
+        include: { vendor: true },
+      });
+
+      if (!user) {
+        return next(new Error("Authentication error: User not found in database"));
+      }
+
+      socket.data = { 
+        ...socket.data, 
+        userId: user.id,
+        vendorId: user.vendor?.id,
+      };
       next();
     } catch (err: any) {
       logger.error(err, "❌ Socket authentication failed:");
@@ -60,7 +76,8 @@ export const configureWebSocket = (httpServer: HttpServer): SocketIOServer => {
 
   io.on("connection", (socket) => {
     const userId = socket.data.userId;
-    logger.info(`Cliente conectado: ${socket.id} (User: ${userId})`);
+    const vendorId = socket.data.vendorId;
+    logger.info(`Cliente conectado: ${socket.id} (DB User ID: ${userId})`);
 
     // Automatically join secure user room
     if (userId) {
@@ -69,11 +86,18 @@ export const configureWebSocket = (httpServer: HttpServer): SocketIOServer => {
       logger.info(`Cliente ${socket.id} se unió automáticamente a la sala: user_${userId}`);
     }
 
+    // Automatically join vendor room if the user owns a restaurant
+    if (vendorId) {
+      socket.join(`user_${vendorId}`);
+      socket.join(vendorId);
+      logger.info(`Cliente ${socket.id} se unió automáticamente a la sala de vendor: user_${vendorId}`);
+    }
+
     // Explicit room joining
     socket.on("join_room", (roomId: string) => {
       socket.join(`user_${roomId}`);
       socket.join(roomId);
-      logger.info(`Cliente ${socket.id} se unió a la sala: ${roomId}`);
+      logger.info(`Cliente ${socket.id} se unió a la sala explícita: ${roomId}`);
     });
 
     socket.on("disconnect", () => {

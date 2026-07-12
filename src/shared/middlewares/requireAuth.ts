@@ -22,7 +22,6 @@ export const requireAuth = async (
     }
 
     const token = authHeader.split(" ")[1];
-    console.log("[DEBUG] Token recibido:", token?.substring(0, 50), "... length:", token?.length);
     if (!token || token.trim() === "") {
       throw new AppError("Missing token", 401);
     }
