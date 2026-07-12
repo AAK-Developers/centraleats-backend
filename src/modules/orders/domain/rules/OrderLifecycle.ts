@@ -13,7 +13,7 @@ import { OrderStatus } from "@prisma/client";
  * x. CANCELLED        - Excepción: cancelada
  */
 export const OrderLifecycle: Record<OrderStatus, OrderStatus[]> = {
-  PENDING_PAYMENT: [OrderStatus.PAID, OrderStatus.CANCELLED],
+  PENDING_PAYMENT: [OrderStatus.PAID, OrderStatus.RECEIVED, OrderStatus.CANCELLED],
   PAID: [OrderStatus.RECEIVED, OrderStatus.CANCELLED],
   RECEIVED: [OrderStatus.PREPARING, OrderStatus.CANCELLED],
   PREPARING: [OrderStatus.READY, OrderStatus.CANCELLED],

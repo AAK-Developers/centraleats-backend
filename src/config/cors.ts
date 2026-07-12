@@ -31,6 +31,7 @@ export const getAllowedOrigins = (): string[] => {
   // Always allow Capacitor mobile app origins
   const mobileOrigins = [
     "https://localhost",
+    "http://localhost",
     "capacitor://localhost",
   ];
   mobileOrigins.forEach((mobile) => {
