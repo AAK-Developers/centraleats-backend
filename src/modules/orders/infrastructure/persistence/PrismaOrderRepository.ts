@@ -2,6 +2,8 @@ import { prisma } from "../../../../infrastructure/database/prismaClient";
 import { Order } from "../../domain/entities/Order";
 import { CreateOrderInput, IOrderRepository } from "../../domain/repositories/IOrderRepository";
 import { OrderStatus as PrismaOrderStatus } from "@prisma/client";
+import { StockError } from "../../domain/rules/StockError";
+import crypto from "crypto";
 
 export class PrismaOrderRepository implements IOrderRepository {
   private toDomain(prismaOrder: any): Order {
@@ -19,24 +21,73 @@ export class PrismaOrderRepository implements IOrderRepository {
   }
 
   async create(input: CreateOrderInput): Promise<Order> {
-    const randomCode = Math.floor(1000 + Math.random() * 9000).toString();
-    const prismaOrder = await prisma.order.create({
-      data: {
-        userId: input.userId,
-        vendorId: input.vendorId,
-        totalAmount: input.totalAmount,          // Centavos — computed server-side
-        status: PrismaOrderStatus.PENDING_PAYMENT,
-        pickupCode: randomCode,
-        items: {
-          create: input.items.map(item => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,           // Price snapshot at order time (centavos)
-          })),
-        },
-      },
-    });
-    return this.toDomain(prismaOrder);
+    const MAX_RETRIES = 3;
+    let retries = 0;
+
+    while (retries < MAX_RETRIES) {
+      try {
+        const randomCode = crypto.randomBytes(3).toString("hex").toUpperCase();
+
+        const prismaOrder = await prisma.$transaction(async (tx) => {
+          // 1. Decremento atómico de stock (previene sobreventa)
+          for (const item of input.items) {
+            const result = await tx.product.updateMany({
+              where: {
+                id: item.productId,
+                stock: { gte: item.quantity },
+                isActive: true,
+                isAvailable: true,
+              },
+              data: {
+                stock: { decrement: item.quantity },
+              },
+            });
+
+            if (result.count === 0) {
+              throw new Error(`INSUFFICIENT_STOCK_${item.productId}`);
+            }
+          }
+
+          // 2. Creación de orden
+          return await tx.order.create({
+            data: {
+              userId: input.userId,
+              vendorId: input.vendorId,
+              totalAmount: input.totalAmount, // Centavos — computed server-side
+              status: PrismaOrderStatus.PENDING_PAYMENT,
+              pickupCode: randomCode,
+              items: {
+                create: input.items.map((item) => ({
+                  productId: item.productId,
+                  quantity: item.quantity,
+                  unitPrice: item.unitPrice, // Price snapshot at order time (centavos)
+                })),
+              },
+            },
+          });
+        });
+
+        return this.toDomain(prismaOrder);
+      } catch (error: any) {
+        if (error.message.startsWith("INSUFFICIENT_STOCK_")) {
+          const productId = error.message.replace("INSUFFICIENT_STOCK_", "");
+          throw new StockError(productId);
+        }
+
+        // P2002 es el código de Prisma para Unique Constraint Violation
+        if (error.code === "P2002" && error.meta?.target?.includes("pickupCode")) {
+          retries++;
+          if (retries === MAX_RETRIES) {
+            throw new Error("No se pudo generar un código de retiro único después de varios intentos");
+          }
+          continue; // Reintentar con un nuevo código
+        }
+
+        throw error;
+      }
+    }
+    
+    throw new Error("Error inesperado al crear la orden");
   }
 
   async findByUserId(userId: string, filters?: { status?: PrismaOrderStatus; active?: boolean }): Promise<any[]> {
